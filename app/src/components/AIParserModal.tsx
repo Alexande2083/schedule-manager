@@ -1,0 +1,365 @@
+import { useState } from 'react';
+import { X, Sparkles, Loader2, Plus, Check, AlertTriangle, Trash2, Edit3 } from 'lucide-react';
+import type { Task } from '@/types';
+import { getToday } from '@/utils/date';
+import { cn } from '@/lib/utils';
+
+// 后端代理地址 — 开发时由 Vite 代理，生产时同域
+const API_BASE = '';
+
+interface AIParserModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onAddTasks: (tasks: Omit<Task, 'id' | 'createdAt' | 'order'>[]) => void;
+  tags: Record<string, { label: string; color: string }>;
+}
+
+interface ParsedTask {
+  title: string;
+  date: string;
+  time?: string;
+  duration: number;
+  tag: string;
+  importance: 'important' | 'normal';
+  urgency: 'urgent' | 'normal';
+  deadline?: string;
+  projectId?: string;
+  selected: boolean;
+}
+
+const SYSTEM_PROMPT = `你是一个任务提取助手。请分析用户粘贴的通知/会议纪要/工作安排文本，提取所有明确的任务事项。
+
+要求：
+1. 提取每个具体任务，忽略寒暄语、背景描述等非任务内容
+2. 如果文本中有明确的时间，提取为 date (YYYY-MM-DD) 和 time (HH:MM)
+3. 如果没有明确日期，使用默认日期
+4. 根据任务性质判断 importance(important/normal) 和 urgency(urgent/normal)
+5. 根据内容判断最合适的 tag：work(工作事项), meeting(会议), important(重要任务), personal(个人事务)
+6. 如果有明确的截止日期，提取为 deadline (YYYY-MM-DD)
+7. duration 根据任务复杂度估算，单位分钟
+
+请严格以 JSON 格式返回，不要有任何其他文字：
+{
+  "tasks": [
+    {
+      "title": "任务名称",
+      "date": "2026-04-27",
+      "time": "09:00",
+      "duration": 60,
+      "tag": "work",
+      "importance": "important",
+      "urgency": "urgent",
+      "deadline": "2026-04-28"
+    }
+  ]
+}`;
+
+export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserModalProps) {
+  const [notificationText, setNotificationText] = useState('');
+  const [parsedTasks, setParsedTasks] = useState<ParsedTask[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState<ParsedTask | null>(null);
+  const handleParse = async () => {
+    if (!notificationText.trim()) { setError('请输入通知文本'); return; }
+
+    setLoading(true);
+    setError(null);
+    setParsedTasks([]);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/parse`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: `默认日期：${getToday()}\n\n通知内容：\n${notificationText.trim()}` },
+          ],
+          temperature: 0.3,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `请求失败 (${response.status})`);
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '';
+
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('AI 返回格式不正确，未找到 JSON');
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (!parsed.tasks || !Array.isArray(parsed.tasks)) {
+        throw new Error('AI 返回格式不正确，缺少 tasks 数组');
+      }
+
+      const validTagKeys = Object.keys(tags);
+      const tasksWithDefaults: ParsedTask[] = parsed.tasks.map((t: Record<string, unknown>) => ({
+        title: String(t.title || '未命名任务'),
+        date: String(t.date || getToday()),
+        time: t.time ? String(t.time) : undefined,
+        duration: typeof t.duration === 'number' ? t.duration : 60,
+        tag: validTagKeys.includes(String(t.tag)) ? String(t.tag) : validTagKeys[0] || 'work',
+        importance: t.importance === 'important' ? 'important' as const : 'normal' as const,
+        urgency: t.urgency === 'urgent' ? 'urgent' as const : 'normal' as const,
+        deadline: t.deadline ? String(t.deadline) : undefined,
+        projectId: t.projectId ? String(t.projectId) : undefined,
+        selected: true,
+      }));
+
+      setParsedTasks(tasksWithDefaults);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '解析失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddAll = () => {
+    const selected = parsedTasks.filter(t => t.selected);
+    if (selected.length === 0) { setError('请至少选择一个任务'); return; }
+    onAddTasks(selected.map(t => ({
+      title: t.title,
+      completed: false,
+      date: t.date,
+      tag: t.tag,
+      time: t.time,
+      duration: t.duration,
+      importance: t.importance,
+      urgency: t.urgency,
+      deadline: t.deadline,
+      projectId: t.projectId,
+      pomodoros: 0,
+      pinned: false,
+    })));
+    setParsedTasks([]);
+    setNotificationText('');
+    onClose();
+  };
+
+  const toggleTask = (idx: number) => {
+    setParsedTasks(prev => prev.map((t, i) => i === idx ? { ...t, selected: !t.selected } : t));
+  };
+
+  const removeTask = (idx: number) => {
+    setParsedTasks(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const startEdit = (idx: number) => {
+    setEditingTask(idx);
+    setEditDraft({ ...parsedTasks[idx] });
+  };
+
+  const saveEdit = () => {
+    if (editDraft && editingTask !== null) {
+      setParsedTasks(prev => prev.map((t, i) => i === editingTask ? editDraft : t));
+    }
+    setEditingTask(null);
+    setEditDraft(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingTask(null);
+    setEditDraft(null);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)] backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-[var(--app-surface)] rounded-2xl shadow-2xl w-[520px] max-w-[90vw] max-h-[85vh] flex flex-col border border-[var(--app-border)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} className="text-[#d4857a]" />
+            <h3 className="text-base font-semibold text-[var(--app-text)]">AI 智能解析</h3>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--app-text-muted)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)] transition-all">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 pb-5 space-y-4 min-h-0">
+          <p className="text-[11px] text-[var(--app-text-muted)] leading-relaxed">
+            粘贴上级通知、会议纪要或工作安排，DeepSeek AI 自动提取任务事项，一键导入日程。
+          </p>
+
+          {/* Notification Text Input */}
+          <div>
+            <label className="block text-xs font-medium text-[var(--app-text-muted)] mb-1.5">通知/会议纪要文本</label>
+            <textarea
+              value={notificationText}
+              onChange={(e) => setNotificationText(e.target.value)}
+              placeholder="请粘贴通知内容，例如：\n各位同事，本周工作安排如下：\n1. 周三上午9点召开产品设计评审会议，预计1小时\n2. 周五前完成Q2季度报告初稿\n3. 下周一与客户进行需求对接..."
+              className="w-full h-32 text-xs bg-[var(--app-input-bg)] rounded-lg px-3 py-2.5 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[#d4857a] transition-colors resize-none leading-relaxed"
+            />
+          </div>
+
+          {/* Parse Button */}
+          <button
+            onClick={handleParse}
+            disabled={loading || !notificationText.trim()}
+            className={cn(
+              'w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
+              loading
+                ? 'bg-[var(--app-border)] text-[var(--app-text-muted)] cursor-not-allowed'
+                : notificationText.trim()
+                  ? 'bg-gradient-to-r from-[#d4857a] to-[#d4a08a] text-white hover:brightness-110 shadow-sm'
+                  : 'bg-[var(--app-border)] text-[var(--app-text-placeholder)] cursor-not-allowed'
+            )}
+          >
+            {loading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {loading ? 'DeepSeek 解析中...' : '开始解析'}
+          </button>
+
+          {/* Backend proxy status */}
+          <div className="flex items-center gap-1.5 text-[10px] text-[var(--app-text-muted)]">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            API Key 已安全存储在后端，前端不再暴露密钥
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
+              <AlertTriangle size={14} />
+              {error}
+            </div>
+          )}
+
+          {/* Parsed Tasks Preview */}
+          {parsedTasks.length > 0 && (
+            <div className="space-y-3 pt-2 border-t border-[var(--app-border)]">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold text-[var(--app-text)]">
+                  已提取 {parsedTasks.length} 个任务
+                </h4>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setParsedTasks(prev => prev.map(t => ({ ...t, selected: true })))}
+                    className="text-[10px] text-[var(--app-text-muted)] hover:text-[#d4857a]"
+                  >
+                    全选
+                  </button>
+                  <button
+                    onClick={() => setParsedTasks(prev => prev.map(t => ({ ...t, selected: false })))}
+                    className="text-[10px] text-[var(--app-text-muted)] hover:text-[#d4857a]"
+                  >
+                    全不选
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                {parsedTasks.map((task, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      'flex items-start gap-2 p-2.5 rounded-lg border transition-all',
+                      task.selected
+                        ? 'border-[#d4857a]/30 bg-[#d4857a]/5'
+                        : 'border-[var(--app-border)] bg-[var(--app-surface-hover)] opacity-60'
+                    )}
+                  >
+                    <button
+                      onClick={() => toggleTask(idx)}
+                      className={cn(
+                        'mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0',
+                        task.selected ? 'bg-[#d4857a] border-[#d4857a]' : 'border-[var(--app-border)]'
+                      )}
+                    >
+                      {task.selected && <Check size={10} className="text-white" />}
+                    </button>
+
+                    <div className="flex-1 min-w-0">
+                      {editingTask === idx && editDraft ? (
+                        <div className="space-y-1.5">
+                          <input
+                            value={editDraft.title}
+                            onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })}
+                            className="w-full text-xs bg-transparent outline-none border-b border-[#d4857a] text-[var(--app-text)]"
+                          />
+                          <div className="flex gap-1.5 flex-wrap">
+                            <input
+                              type="date"
+                              value={editDraft.date}
+                              onChange={(e) => setEditDraft({ ...editDraft, date: e.target.value })}
+                              className="text-[10px] bg-[var(--app-input-bg)] rounded px-1.5 py-0.5 border border-[var(--app-border)]"
+                            />
+                            <input
+                              type="time"
+                              value={editDraft.time || ''}
+                              onChange={(e) => setEditDraft({ ...editDraft, time: e.target.value || undefined })}
+                              className="text-[10px] bg-[var(--app-input-bg)] rounded px-1.5 py-0.5 border border-[var(--app-border)]"
+                            />
+                            <select
+                              value={editDraft.tag}
+                              onChange={(e) => setEditDraft({ ...editDraft, tag: e.target.value })}
+                              className="text-[10px] bg-[var(--app-input-bg)] rounded px-1.5 py-0.5 border border-[var(--app-border)]"
+                            >
+                              {Object.keys(tags).map(k => (
+                                <option key={k} value={k}>{tags[k].label}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <button onClick={saveEdit} className="text-[10px] px-2 py-0.5 rounded bg-[#d4857a] text-white">保存</button>
+                            <button onClick={cancelEdit} className="text-[10px] px-2 py-0.5 rounded bg-[var(--app-border)] text-[var(--app-text-secondary)]">取消</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-xs font-medium text-[var(--app-text)] truncate">{task.title}</div>
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            {task.time && <span className="text-[10px] text-[var(--app-text-muted)]">{task.time}</span>}
+                            <span className="text-[10px] text-[var(--app-text-muted)]">{task.duration}分钟</span>
+                            {task.deadline && <span className="text-[10px] text-red-500">截止 {task.deadline}</span>}
+                            <span
+                              className="text-[9px] px-1 py-0.5 rounded text-white"
+                              style={{ backgroundColor: tags[task.tag]?.color || '#9ca3af' }}
+                            >
+                              {tags[task.tag]?.label || task.tag}
+                            </span>
+                            {task.importance === 'important' && <span className="text-[9px] text-red-600">重要</span>}
+                            {task.urgency === 'urgent' && <span className="text-[9px] text-orange-600">紧急</span>}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {editingTask !== idx && (
+                      <div className="flex gap-0.5">
+                        <button onClick={() => startEdit(idx)} className="p-1 rounded text-[var(--app-text-muted)] hover:text-[#d4857a]">
+                          <Edit3 size={12} />
+                        </button>
+                        <button onClick={() => removeTask(idx)} className="p-1 rounded text-[var(--app-text-muted)] hover:text-red-500">
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={handleAddAll}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[#d4857a] text-white hover:bg-[#c97a6e] transition-colors"
+              >
+                <Plus size={14} />
+                添加选中的 {parsedTasks.filter(t => t.selected).length} 个任务
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

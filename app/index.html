@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>日程管理</title>
+    <style>
+      /* 隐藏部署平台右下角品牌文字，保留图标 */
+      a[href*="kimi.com/agent"] {
+        font-size: 0 !important;
+        color: transparent !important;
+        text-decoration: none !important;
+        letter-spacing: -9999px !important;
+        text-indent: -9999px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        width: 24px !important;
+        height: 24px !important;
+        display: inline-block !important;
+      }
+      a[href*="kimi.com/agent"] * {
+        font-size: 0 !important;
+        color: transparent !important;
+        text-indent: -9999px !important;
+      }
+      a[href*="kimi.com/agent"]::before,
+      a[href*="kimi.com/agent"] svg,
+      a[href*="kimi.com/agent"] img,
+      a[href*="kimi.com/agent"] i {
+        font-size: 14px !important;
+        letter-spacing: normal !important;
+        text-indent: 0 !important;
+        color: inherit !important;
+      }
+    </style>
+    <script>
+      (function() {
+        function cleanBrand() {
+          var found = false;
+          document.querySelectorAll('a[href*="kimi.com/agent"]').forEach(function(el) {
+            found = true;
+            el.style.cssText = 'font-size:0!important;color:transparent!important;text-decoration:none!important;letter-spacing:-9999px!important;text-indent:-9999px!important;white-space:nowrap!important;overflow:hidden!important;width:24px!important;height:24px!important;display:inline-block!important;';
+            el.childNodes.forEach(function(c) {
+              if (c.nodeType === Node.TEXT_NODE) c.textContent = '';
+            });
+          });
+          if (!found) {
+            // 备用：查找 body 末尾固定定位小元素
+            var els = document.querySelectorAll('body > *:not(#root)');
+            els.forEach(function(el) {
+              var s = window.getComputedStyle(el);
+              if (s.position === 'fixed' && parseInt(s.bottom) < 60 && parseInt(s.right) < 60 && el.clientWidth < 120) {
+                var textEls = el.querySelectorAll('*');
+                textEls.forEach(function(te) {
+                  var txt = (te.innerText || '').trim();
+                  if (txt === 'Agent' || txt.includes('Kimi') || txt.includes('kimi')) {
+                    if (!te.querySelector('svg,img') && te.tagName !== 'SVG' && te.tagName !== 'IMG') {
+                      te.style.display = 'none';
+                    }
+                  }
+                });
+              }
+            });
+          }
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', function(){ cleanBrand(); setInterval(cleanBrand, 300); });
+        } else {
+          cleanBrand();
+          setInterval(cleanBrand, 300);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
