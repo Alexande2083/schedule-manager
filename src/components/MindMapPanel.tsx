@@ -461,10 +461,6 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
 
   return (
     <div className="h-full flex min-w-0" onKeyDown={handleKeyDown} tabIndex={0} style={{ minHeight: '60vh' }}>
-      {/* VISIBLE marker to confirm component mounts */}
-      <div style={{ position: 'fixed', top: 0, left: 0, padding: '4px 8px', background: 'red', color: 'white', zIndex: 9999, fontSize: '11px' }}>
-        MindMap Mounted | rootId={data.rootId} | nodes={Object.keys(data.nodes).length}
-      </div>
       {/* ── Main canvas area ── */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Toolbar */}
@@ -491,7 +487,7 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
         {/* Canvas */}
         <div
           ref={containerRef}
-          className="flex-1 rounded-xl border border-[var(--app-border)] overflow-hidden relative select-none"
+          className="flex-1 rounded-xl border border-[var(--app-border)] overflow-hidden relative select-none w-full h-full"
           style={{ backgroundColor: theme.bg, cursor: isDragging ? 'grabbing' : 'grab' }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
