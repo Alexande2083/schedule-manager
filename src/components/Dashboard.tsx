@@ -13,6 +13,9 @@ import { GanttChart } from './GanttChart';
 import { WeatherTimeWidget } from './WeatherTimeWidget';
 import { CalendarPanel } from './CalendarPanel';
 import { DailyAutoPanel } from './DailyAutoPanel';
+import { TaskTrendChart } from './TaskTrendChart';
+import { CompletionStatsPanel } from './CompletionStatsPanel';
+import { HeatmapPanel } from './HeatmapPanel';
 import type { TaskTemplate } from '@/hooks/useTaskTemplates';
 
 interface DashboardProps {
@@ -219,19 +222,19 @@ export const Dashboard = memo(function Dashboard({
         </div>
       </div>
 
-      {/* ── Row: Analytics (Level 2) — disabled for diagnostic ── */}
+      {/* ── Row: Analytics (Level 2) ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="card" style={{ padding: 'var(--space-4)' }}>
           <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">完成趋势</p>
-          <p className="text-sm text-[var(--color-text-secondary)]">图表已禁用（诊断中）</p>
+          <TaskTrendChart tasks={tasks} embedded />
         </div>
         <div className="card" style={{ padding: 'var(--space-4)' }}>
           <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">完成统计</p>
-          <p className="text-sm text-[var(--color-text-secondary)]">图表已禁用（诊断中）</p>
+          <CompletionStatsPanel tasks={filteredTasks} projects={projects} />
         </div>
         <div className="card" style={{ padding: 'var(--space-4)' }}>
           <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">活跃热力图</p>
-          <p className="text-sm text-[var(--color-text-secondary)]">图表已禁用（诊断中）</p>
+          <HeatmapPanel tasks={tasks} compact />
         </div>
       </div>
 
