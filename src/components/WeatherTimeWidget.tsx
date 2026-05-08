@@ -139,7 +139,7 @@ export function WeatherTimeWidget() {
     } else {
       fetchWeather(39.9042, 116.4074, '北京');
     }
-  }, [fetchWeather]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (fetchedRef.current) return;
