@@ -111,7 +111,7 @@ export async function webdavTest(config: WebDAVConfig): Promise<{ ok: boolean; m
  */
 const DEFAULT_WEBDAV_CONFIG: WebDAVConfig = {
   url: 'https://dav.jianguoyun.com/dav/',
-  username: 'duanxiaohong2082@gmail.com',
+  username: 'sihong_duan@163.com',
   password: 'arp4548vfud4himm',
   filename: 'sunsama-sync.json',
 };
