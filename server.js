@@ -473,7 +473,7 @@ app.post('/api/webdav/pull', async (req, res) => {
   if (!url || !username || !password) {
     return res.status(400).json({ error: '配置信息不完整' });
   }
-  const filePath = (url.replace(/\/$/, '')) + '/' + (filename || 'sunsama-sync.json');
+  const filePath = (url.replace(/\/$/, '')) + '/sunsama/' + (filename || 'sunsama-sync.json');
   try {
     const response = await fetch(filePath, {
       method: 'GET',
