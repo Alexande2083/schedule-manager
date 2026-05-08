@@ -670,7 +670,7 @@ function App() {
           if (data.checklists) setChecklists(newChecklists);
           if (data.contexts) setContexts(newContexts);
           if (data.perspectives) setPerspectives(newPerspectives);
-          if (data.theme) setTheme(data.theme);
+          if (data.theme) setTheme(data.theme as AppTheme);
 
           // Push to server in background (non-blocking)
           try {
