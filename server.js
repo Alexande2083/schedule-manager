@@ -284,9 +284,11 @@ app.post('/api/sync', validate(SyncSchema), (req, res) => {
     }
 
     saveDb();
-    res.json({ success: true });
+    res.json({ success: true, count: { tasks: tasks?.length || 0, projects: projects?.length || 0 } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ POST /api/sync 错误:', err.message);
+    console.error('   请求体大小:', JSON.stringify(req.body).length, 'bytes');
+    res.status(500).json({ error: '服务器内部错误: ' + err.message });
   }
 });
 
@@ -301,7 +303,8 @@ app.post('/api/tasks', validate(TaskSchema), (req, res) => {
     saveDb();
     res.json({ success: true, id: t.id });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ POST /api/tasks 错误:', err.message);
+    res.status(500).json({ error: '服务器内部错误: ' + err.message });
   }
 });
 
@@ -317,7 +320,8 @@ app.put('/api/tasks/:id', (req, res) => {
     saveDb();
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ PUT /api/tasks/:id 错误:', err.message);
+    res.status(500).json({ error: '服务器内部错误: ' + err.message });
   }
 });
 
@@ -332,7 +336,8 @@ app.delete('/api/tasks/:id', (req, res) => {
     saveDb();
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ DELETE /api/tasks/:id 错误:', err.message);
+    res.status(500).json({ error: '服务器内部错误: ' + err.message });
   }
 });
 
@@ -542,6 +547,7 @@ app.post('/api/parse', async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (err) {
+    console.error('❌ POST /api/parse 错误:', err.message);
     res.status(500).json({ error: err.message || '代理请求失败' });
   }
 });
@@ -564,6 +570,7 @@ app.post('/api/summary', async (req, res) => {
     const data = await response.json();
     res.json(data);
   } catch (err) {
+    console.error('❌ POST /api/summary 错误:', err.message);
     res.status(500).json({ error: err.message || '代理请求失败' });
   }
 });
@@ -674,6 +681,8 @@ function createDefaultData(db, userId) {
   ];
   const tagStmt = db.prepare(`INSERT INTO tags (id, user_id, label, color) VALUES (?, ?, ?, ?)`);
   defaultTags.forEach(t => tagStmt.run([t.id, uid, t.label, t.color]));
+  tagStmt.free();
+  tagStmt.free();
 
   // Create default projects
   const defaultProjects = [
@@ -683,6 +692,8 @@ function createDefaultData(db, userId) {
   ];
   const projStmt = db.prepare(`INSERT INTO projects (id, user_id, name, color) VALUES (?, ?, ?, ?)`);
   defaultProjects.forEach(p => projStmt.run([p.id, uid, p.name, p.color]));
+  projStmt.free();
+  projStmt.free();
 
   // Create default checklists
   const defaultChecklists = [
@@ -692,6 +703,8 @@ function createDefaultData(db, userId) {
   ];
   const chkStmt = db.prepare(`INSERT INTO checklists (id, user_id, name, defaultTag, "order", archived) VALUES (?, ?, ?, ?, ?, ?)`);
   defaultChecklists.forEach(c => chkStmt.run([c.id, uid, c.name, c.defaultTag, c.order, 0]));
+  chkStmt.free();
+  chkStmt.free();
 
   // Create default contexts
   const defaultContexts = [
@@ -704,6 +717,8 @@ function createDefaultData(db, userId) {
   ];
   const ctxStmt = db.prepare(`INSERT INTO contexts (id, user_id, label, icon, color) VALUES (?, ?, ?, ?, ?)`);
   defaultContexts.forEach(c => ctxStmt.run([c.id, uid, c.label, c.icon, c.color]));
+  ctxStmt.free();
+  ctxStmt.free();
 
   // Create default perspectives
   const defaultPerspectives = [
@@ -716,6 +731,8 @@ function createDefaultData(db, userId) {
   ];
   const perStmt = db.prepare(`INSERT INTO perspectives (id, user_id, name, icon, filters) VALUES (?, ?, ?, ?, ?)`);
   defaultPerspectives.forEach(p => perStmt.run([p.id, uid, p.name, p.icon, JSON.stringify(p.filters)]));
+  perStmt.free();
+  perStmt.free();
 
   saveDb();
 }

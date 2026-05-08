@@ -12,14 +12,26 @@ export async function initDb() {
   const SQL = await initSqlJs();
 
   if (existsSync(DB_PATH)) {
-    const buffer = readFileSync(DB_PATH);
-    db = new SQL.Database(buffer);
+    try {
+      const buffer = readFileSync(DB_PATH);
+      if (buffer.length === 0) {
+        console.warn('⚠️  data.db 为空文件，重新创建');
+        db = new SQL.Database();
+      } else {
+        db = new SQL.Database(buffer);
+      }
+    } catch (e) {
+      console.error('❌ 加载 data.db 失败，将重新创建:', e.message);
+      db = new SQL.Database();
+    }
   } else {
     db = new SQL.Database();
   }
 
   // Enable WAL mode for better concurrent access
   db.run('PRAGMA journal_mode=WAL');
+  // Clean up any stale WAL files
+  db.run('PRAGMA wal_checkpoint(TRUNCATE)');
 
   // Create tables
   db.run(`
