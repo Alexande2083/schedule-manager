@@ -602,7 +602,7 @@ function App() {
 
         {/* Mobile Bottom Nav (<768px) */}
         <nav className="md:hidden flex-shrink-0 border-t border-[var(--color-border)]">
-          <MobileBottomNav view={view} onChangeView={handleChangeView} onOpenPomodoro={() => setPomodoroOpen(true)} />
+          <MobileBottomNav view={view} onChangeView={handleChangeView} onOpenPomodoro={() => setPomodoroOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
         </nav>
       </div>
 
@@ -760,6 +760,8 @@ function App() {
         isDark={theme.isDark}
         onChangeColorScheme={changeColorScheme}
         onToggleDark={toggleTheme}
+        fontSize={fontSize.size}
+        onChangeFontSize={fontSize.setSize}
       />
 
       {/* Daily Review Modal */}

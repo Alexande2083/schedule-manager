@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import {
-  Settings, Database, Palette, X, Download, Upload, Cloud,
-  Sun, Moon,
+  Settings, Database, Palette, X, Download, Cloud,
+  Sun, Moon, Type,
 } from 'lucide-react';
 import type { ThemeColor } from '@/types';
+import type { FontSize } from '@/hooks/useFontSize';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ interface SettingsModalProps {
   isDark: boolean;
   onChangeColorScheme: (scheme: ThemeColor) => void;
   onToggleDark: () => void;
+  fontSize?: FontSize;
+  onChangeFontSize?: (size: FontSize) => void;
 }
 
 type Tab = 'data' | 'theme';
@@ -33,6 +36,7 @@ const COLOR_SCHEMES: { id: ThemeColor; name: string; color: string }[] = [
 export function SettingsModal({
   isOpen, onClose, onOpenSync, onOpenTheme,
   onExportArchive, colorScheme, isDark, onChangeColorScheme, onToggleDark,
+  fontSize = 'medium', onChangeFontSize,
 }: SettingsModalProps) {
   const [tab, setTab] = useState<Tab>('data');
 
@@ -78,12 +82,38 @@ export function SettingsModal({
                 <SettingsRow icon={Download} title="导出归档" desc="导出已完成任务为 JSON 文件"
                   onClick={() => { onExportArchive(); onClose(); }} />
               )}
-              <SettingsRow icon={Upload} title="导入数据" desc="从 JSON 文件或同步链接恢复数据"
-                onClick={() => { onOpenTheme(); onClose(); }} />
+              <SettingsRow icon={Download} title="导入数据" desc="从 JSON 文件或同步链接恢复数据"
+                onClick={() => { onOpenSync(); onClose(); }} />
             </div>
           )}
           {tab === 'theme' && (
             <div className="space-y-4">
+              {/* Font size */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Type size={14} style={{ color: 'var(--color-text-muted)' }} />
+                  <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>字体大小</span>
+                </div>
+                <div className="flex gap-2">
+                  {([
+                    { key: 'small' as FontSize, label: '小' },
+                    { key: 'medium' as FontSize, label: '中' },
+                    { key: 'large' as FontSize, label: '大' },
+                  ]).map(opt => (
+                    <button key={opt.key}
+                      onClick={() => onChangeFontSize?.(opt.key)}
+                      className="flex-1 px-3 py-2 rounded-btn text-xs font-medium border transition-all"
+                      style={{
+                        background: fontSize === opt.key ? 'var(--color-brand)' : 'var(--color-bg)',
+                        color: fontSize === opt.key ? '#fff' : 'var(--color-text-secondary)',
+                        borderColor: fontSize === opt.key ? 'var(--color-brand)' : 'var(--color-border)',
+                      }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {isDark ? <Moon size={16} style={{ color: 'var(--color-brand)' }} /> : <Sun size={16} style={{ color: 'var(--color-brand)' }} />}
@@ -112,6 +142,12 @@ export function SettingsModal({
                   ))}
                 </div>
               </div>
+              <button
+                onClick={() => { onOpenTheme(); onClose(); }}
+                className="w-full text-center text-[11px] py-2 rounded-btn transition-all"
+                style={{ color: 'var(--color-brand)', background: 'var(--color-bg)' }}>
+                高级主题设置（标签颜色、毛玻璃等） →
+              </button>
             </div>
           )}
         </div>
