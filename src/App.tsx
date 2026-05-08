@@ -90,14 +90,9 @@ function App() {
 
   const { pullFromServer } = useCloudSync(syncData, setSyncData);
 
-  // Pull data from server on startup ONLY if no local data exists
+  // Pull data from server on startup (server returns empty if no sync has occurred)
   useEffect(() => {
-    const hasLocalData = localStorage.getItem('sunsama-tasks');
-    const skipPull = localStorage.getItem('sunsama-skip-pull');
-    if (!hasLocalData && !skipPull) {
-      pullFromServer();
-    }
-    localStorage.removeItem('sunsama-skip-pull');
+    pullFromServer();
   }, []);
 
   // Daily review: show once per day on first visit
