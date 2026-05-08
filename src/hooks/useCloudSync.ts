@@ -13,6 +13,14 @@ export function useCloudSync(
   // Pull data from server on login
   const pullFromServer = useCallback(async () => {
     if (isPullingRef.current) return; // prevent concurrent pulls
+
+    // Skip this pull if we just imported data (prevent overwriting)
+    const skipPull = localStorage.getItem('sunsama-skip-pull');
+    if (skipPull === 'true') {
+      localStorage.removeItem('sunsama-skip-pull');
+      return;
+    }
+
     isPullingRef.current = true;
     try {
       const serverData = await syncGet();

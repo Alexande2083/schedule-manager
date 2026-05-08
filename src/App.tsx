@@ -113,10 +113,11 @@ function App() {
     document.documentElement.style.setProperty('--glass-panel-opacity', `${glassOpacity / 100}`);
   }, [theme, glassOpacity]);
 
-  // URL hash sync detection
+  // URL hash sync detection — listens for both initial load and hashchange events
   useEffect(() => {
-    const hash = window.location.hash;
-    if (hash.startsWith('#sync=')) {
+    const processHashSync = () => {
+      const hash = window.location.hash;
+      if (!hash.startsWith('#sync=')) return;
       try {
         const compressed = hash.slice(6);
         const json = LZString.decompressFromEncodedURIComponent(compressed);
@@ -141,7 +142,14 @@ function App() {
       } catch {
         window.location.hash = '';
       }
-    }
+    };
+
+    // Check on initial mount
+    processHashSync();
+
+    // Also listen for hash changes (SPA navigation, same-tab link clicks)
+    window.addEventListener('hashchange', processHashSync);
+    return () => window.removeEventListener('hashchange', processHashSync);
   }, []);
 
   const toggleTheme = useCallback(() => {
@@ -632,11 +640,17 @@ function App() {
           const contextMap: Record<string, string> = {};
           (data.contexts || []).forEach((c, i) => { contextMap[c.id] = newContexts[i].id; });
 
+          // Map old task IDs to new task IDs (for parentId / dependsOn)
+          const taskMap: Record<string, string> = {};
+          (data.tasks || []).forEach((t, i) => { taskMap[t.id] = newTasks[i].id; });
+
           const remappedTasks = newTasks.map(t => ({
             ...t,
             projectId: t.projectId ? (projectMap[t.projectId] || t.projectId) : undefined,
             checklistId: t.checklistId ? (checklistMap[t.checklistId] || t.checklistId) : undefined,
             contexts: (t.contexts || []).map((ctx: string) => contextMap[ctx] || ctx),
+            parentId: t.parentId ? (taskMap[t.parentId] || t.parentId) : undefined,
+            dependsOn: (t.dependsOn || []).map((depId: string) => taskMap[depId] || depId),
           }));
 
           // Write to localStorage
@@ -665,6 +679,8 @@ function App() {
             console.warn('导入数据同步到服务器失败，将基于本地数据恢复:', e);
           }
 
+          // Prevent pullFromServer from overwriting the just-imported data on reload
+          localStorage.setItem('sunsama-skip-pull', 'true');
           window.location.reload();
         }}
       />
