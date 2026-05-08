@@ -385,6 +385,53 @@ app.post('/api/summary', async (req, res) => {
   }
 });
 
+// ─── MindMap AI Expand ──────────────────────────────────────────
+app.post('/api/mindmap/expand', async (req, res) => {
+  if (!DEEPSEEK_API_KEY) {
+    return res.status(500).json({ error: '服务器未配置 DEEPSEEK_API_KEY' });
+  }
+  try {
+    const { nodeText, parentContext, mode = 'expand' } = req.body;
+    if (!nodeText) return res.status(400).json({ error: '缺少 nodeText' });
+
+    const prompts = {
+      expand: '你是目标拆解专家。把这个项目目标拆解为子模块。每行一个，格式: "- 子模块名"。最多5个。只返回列表，不要解释。',
+      breakdown: '你是项目拆解专家。把用户的任务拆解为可执行的子任务。每行一个，格式: "- 子任务名"。最多6个。只返回列表，不要解释。',
+      suggest: '你是项目规划专家。给这个节点建议缺失的依赖或下一步。每行一个，格式: "- 建议"。最多3个。只返回列表，不要解释。',
+    };
+
+    const response = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: prompts[mode] || prompts.expand },
+          { role: 'user', content: `节点: "${nodeText}"\n父级上下文: ${parentContext || '无'}` },
+        ],
+        temperature: 0.3,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      return res.status(response.status).json({ error: err.error?.message || 'DeepSeek 请求失败' });
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || '';
+    const children = text.split('\n')
+      .map(l => l.replace(/^[-\d.]+\s*/, '').trim())
+      .filter(l => l.length > 0 && l.length < 50)
+      .slice(0, 6);
+
+    res.json({ children });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'AI 扩展失败' });
+  }
+});
+
 // ─── Fallback ─────────────────────────────────────────────
 app.use((_req, res) => {
   res.sendFile(join(__dirname, 'dist', 'index.html'));

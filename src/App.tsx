@@ -567,7 +567,7 @@ function App() {
               />
             </div>
           ) : view === 'mindmap' ? (
-            <MindMapPanel />
+            <MindMapPanel onAddTask={handleAddTask} tags={tags} />
           ) : view === 'review' ? (
             <div className="p-6">
               <ReviewPanel tasks={tasks} checklists={checklists} projects={projects} tags={tags}
