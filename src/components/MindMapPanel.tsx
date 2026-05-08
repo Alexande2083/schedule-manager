@@ -45,11 +45,11 @@ interface Position { x: number; y: number; }
 const STORAGE_KEY = 'mindmap-v2-data';
 
 const THEMES = {
-  light:   { bg: '#ffffff', rootGradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)', lineColor: '#6366f1', nodeBg: '#ffffff', nodeBorder: '#e2e8f0', nodeText: '#1e293b', accent: '#6366f1' },
-  ocean:   { bg: '#f0f5fa', rootGradient: 'linear-gradient(135deg, #0ea5e9, #06b6d4)', lineColor: '#0ea5e9', nodeBg: '#ffffff', nodeBorder: '#bae6fd', nodeText: '#0c4a6e', accent: '#0ea5e9' },
-  forest:  { bg: '#f2f7f0', rootGradient: 'linear-gradient(135deg, #22c55e, #10b981)', lineColor: '#22c55e', nodeBg: '#ffffff', nodeBorder: '#bbf7d0', nodeText: '#14532d', accent: '#22c55e' },
-  sunset:  { bg: '#fef7f0', rootGradient: 'linear-gradient(135deg, #f97316, #ef4444)', lineColor: '#f97316', nodeBg: '#ffffff', nodeBorder: '#fed7aa', nodeText: '#7c2d12', accent: '#f97316' },
-  purple:  { bg: '#faf5ff', rootGradient: 'linear-gradient(135deg, #a855f7, #d946ef)', lineColor: '#a855f7', nodeBg: '#ffffff', nodeBorder: '#e9d5ff', nodeText: '#4c1d95', accent: '#a855f7' },
+  light:   { bg: '#ffffff', rootGradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)', lineColor: '#6366f1', nodeBg: 'linear-gradient(135deg, #e0e7ff, #ede9fe)', nodeBgSolid: '#e0e7ff', nodeBorder: '#6366f1', nodeText: '#1e293b', accent: '#6366f1' },
+  ocean:   { bg: '#f0f5fa', rootGradient: 'linear-gradient(135deg, #0ea5e9, #06b6d4)', lineColor: '#0ea5e9', nodeBg: 'linear-gradient(135deg, #e0f2fe, #ccfafe)', nodeBgSolid: '#e0f2fe', nodeBorder: '#0ea5e9', nodeText: '#0c4a6e', accent: '#0ea5e9' },
+  forest:  { bg: '#f2f7f0', rootGradient: 'linear-gradient(135deg, #22c55e, #10b981)', lineColor: '#22c55e', nodeBg: 'linear-gradient(135deg, #dcfce7, #ccfbf1)', nodeBgSolid: '#dcfce7', nodeBorder: '#22c55e', nodeText: '#14532d', accent: '#22c55e' },
+  sunset:  { bg: '#fef7f0', rootGradient: 'linear-gradient(135deg, #f97316, #ef4444)', lineColor: '#f97316', nodeBg: 'linear-gradient(135deg, #ffedd5, #fee2e2)', nodeBgSolid: '#ffedd5', nodeBorder: '#f97316', nodeText: '#7c2d12', accent: '#f97316' },
+  purple:  { bg: '#faf5ff', rootGradient: 'linear-gradient(135deg, #a855f7, #d946ef)', lineColor: '#a855f7', nodeBg: 'linear-gradient(135deg, #f3e8ff, #fae8ff)', nodeBgSolid: '#f3e8ff', nodeBorder: '#a855f7', nodeText: '#4c1d95', accent: '#a855f7' },
 };
 
 // ─── Type visual config ───
@@ -438,14 +438,14 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
       if (!node) return;
       const isRoot = id === data.rootId;
       const typeCfg = TYPE_CONFIG[node.type];
-      ctx.fillStyle = isRoot ? theme.accent : theme.nodeBg;
+      ctx.fillStyle = isRoot ? theme.accent : theme.nodeBgSolid;
       ctx.strokeStyle = isRoot ? theme.accent : typeCfg.border;
       ctx.lineWidth = isRoot ? 0 : 1.5;
       ctx.beginPath();
       ctx.roundRect(p.x, p.y, NODE_W, NODE_H, 10);
       ctx.fill();
       if (!isRoot) ctx.stroke();
-      ctx.fillStyle = isRoot ? '#ffffff' : '#e4e5e7';
+      ctx.fillStyle = isRoot ? '#ffffff' : theme.nodeText;
       ctx.font = `500 ${isRoot ? 13 : 11}px -apple-system, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -583,7 +583,7 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
                         {!isRoot && <typeCfg.icon size={12} style={{ color: typeCfg.border, flexShrink: 0 }} />}
                         {node.icon && <span className="text-xs shrink-0">{node.icon}</span>}
                         <span className={cn('text-[11px] font-medium truncate leading-tight', isRoot ? 'text-white' : '')}
-                          style={{ color: isRoot ? undefined : '#e4e5e7' }}>
+                          style={{ color: isRoot ? undefined : theme.nodeText }}>
                           {node.text}
                         </span>
                         {node.linkedTaskId && <ListChecks size={10} className="text-green-400 shrink-0" />}

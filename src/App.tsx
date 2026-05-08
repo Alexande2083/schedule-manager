@@ -653,17 +653,26 @@ function App() {
             dependsOn: (t.dependsOn || []).map((depId: string) => taskMap[depId] || depId),
           }));
 
-          // Write to localStorage
+          // Write to localStorage directly for immediate persistence
           localStorage.setItem('sunsama-tasks', JSON.stringify(remappedTasks));
           if (data.tags) localStorage.setItem('sunsama-tags', JSON.stringify(data.tags));
           if (data.projects) localStorage.setItem('sunsama-projects', JSON.stringify(newProjects));
           if (data.checklists) localStorage.setItem('sunsama-checklists', JSON.stringify(newChecklists));
           if (data.contexts) localStorage.setItem('sunsama-contexts', JSON.stringify(newContexts));
           if (data.perspectives) localStorage.setItem('sunsama-perspectives', JSON.stringify(newPerspectives));
-          if (data.theme) localStorage.setItem('sunsama-theme', JSON.stringify(data.theme));
+          if (data.theme) localStorage.setItem('sunsama-theme-v2', JSON.stringify(data.theme));
           if (data.selectedDate) localStorage.setItem('sunsama-selected-date', JSON.stringify(data.selectedDate));
 
-          // Push to server BEFORE reload, so pullFromServer gets the imported data
+          // Update React state (will also persist via useLocalStorage useEffect)
+          setTasks(remappedTasks);
+          if (data.tags) setTags(data.tags);
+          if (data.projects) setProjects(newProjects);
+          if (data.checklists) setChecklists(newChecklists);
+          if (data.contexts) setContexts(newContexts);
+          if (data.perspectives) setPerspectives(newPerspectives);
+          if (data.theme) setTheme(data.theme);
+
+          // Push to server in background (non-blocking)
           try {
             await syncPut({
               tasks: remappedTasks,
@@ -681,7 +690,8 @@ function App() {
 
           // Prevent pullFromServer from overwriting the just-imported data on reload
           localStorage.setItem('sunsama-skip-pull', 'true');
-          window.location.reload();
+          // Delay reload to let React flush state to localStorage
+          setTimeout(() => window.location.reload(), 500);
         }}
       />
 
