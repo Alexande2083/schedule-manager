@@ -204,7 +204,7 @@ app.use(express.json({ limit: '10mb' }));
 // Serve static files (frontend build)
 app.use(express.static(join(__dirname, 'dist')));
 
-// Apply sync key auth to data API routes only (not AI proxy, not WebDAV)
+// Apply sync key auth to data API routes only (not AI proxy)
 app.use('/api/sync', syncKeyAuth);
 app.use('/api/tasks', syncKeyAuth);
 app.use('/api/notifications', syncKeyAuth);
@@ -483,23 +483,20 @@ app.post('/api/webdav/push', async (req, res) => {
     return res.status(400).json({ error: '配置信息或数据不完整' });
   }
   const auth = getWebDAVAuthHeader(username, password);
-  // 坚果云不允许直接在 /dav/ 根目录 PUT 文件，需要在子目录中
   const baseUrl = url.replace(/\/$/, '');
   const dirPath = baseUrl + '/sunsama';
   const filePath = dirPath + '/' + (filename || 'sunsama-sync.json');
 
   try {
-    // Step 1: 先创建 sunsama 子目录（如果已存在会返回 405，忽略即可）
     try {
       await fetch(dirPath + '/', {
         method: 'MKCOL',
         headers: { 'Authorization': auth },
       });
     } catch {
-      // MKCOL 失败通常是因为目录已存在(405)或不支持该方法，继续尝试 PUT
+      // MKCOL failed, usually dir already exists (405) or unsupported, continue
     }
 
-    // Step 2: PUT 文件
     const response = await fetch(filePath, {
       method: 'PUT',
       headers: {
@@ -512,15 +509,11 @@ app.post('/api/webdav/push', async (req, res) => {
       res.json({ success: true });
     } else {
       const bodyText = await response.text().catch(() => '');
-      const isHtmlResponse = bodyText.trim().startsWith('<');
+      const isHtml = bodyText.trim().startsWith('<');
       if (response.status === 404) {
-        res.status(404).json({
-          error: '坚果云返回 404：无法在指定路径创建文件。建议：1）在坚果云中手动创建「sunsama」文件夹；2）或在 URL 中指定一个已有文件夹，如 https://dav.jianguoyun.com/dav/我的坚果云/',
-        });
-      } else if (isHtmlResponse) {
-        res.status(response.status).json({
-          error: `坚果云服务器返回错误 ${response.status}。建议：在坚果云网页版中创建「sunsama」文件夹后再试。`,
-        });
+        res.status(404).json({ error: '坚果云返回404：请在坚果云网页版中手动创建「sunsama」文件夹后再试。' });
+      } else if (isHtml) {
+        res.status(response.status).json({ error: `坚果云返回HTML页面(${response.status})，请检查URL是否正确。` });
       } else {
         res.status(response.status).json({ error: `推送失败: ${response.status} ${bodyText.slice(0, 100)}` });
       }
@@ -623,7 +616,6 @@ app.post('/api/mindmap/expand', validate(MindMapExpandSchema), async (req, res) 
 });
 
 // ─── Global Error Handler ─────────────────────────────────
-// 捕获所有未处理的异常，防止服务 crash 并返回 JSON 错误
 app.use((err, _req, res, _next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ error: '服务器内部错误，请稍后重试' });
@@ -716,4 +708,16 @@ function createDefaultData(db, userId) {
   // Create default perspectives
   const defaultPerspectives = [
     { id: `urgent-important_${uid}`, name: '紧急且重要', icon: 'Flame', filters: { importance: 'important', urgency: 'urgent', completed: false, dateRange: 'all' } },
-    { id: `today-due_${uid}`, name: '今日截止', icon: 'Calenda
+    { id: `today-due_${uid}`, name: '今日截止', icon: 'CalendarClock', filters: { dateRange: 'today', completed: false } },
+    { id: `overdue_${uid}`, name: '已逾期', icon: 'AlertTriangle', filters: { dateRange: 'overdue', completed: false } },
+    { id: `work-only_${uid}`, name: '工作聚焦', icon: 'Briefcase', filters: { tags: ['work'], completed: false, dateRange: 'week' } },
+    { id: `personal-only_${uid}`, name: '个人事务', icon: 'Coffee', filters: { tags: ['personal'], completed: false, dateRange: 'all' } },
+    { id: `high-priority_${uid}`, name: '高优先级', icon: 'Flag', filters: { importance: 'important', completed: false, dateRange: 'all' } },
+  ];
+  const perStmt = db.prepare(`INSERT INTO perspectives (id, user_id, name, icon, filters) VALUES (?, ?, ?, ?, ?)`);
+  defaultPerspectives.forEach(p => perStmt.run([p.id, uid, p.name, p.icon, JSON.stringify(p.filters)]));
+
+  saveDb();
+}
+
+start();
