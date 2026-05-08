@@ -204,11 +204,11 @@ app.use(express.json({ limit: '10mb' }));
 // Serve static files (frontend build)
 app.use(express.static(join(__dirname, 'dist')));
 
-// Apply sync key auth to data API routes only (not AI proxy)
+// Apply sync key auth to data API routes only (not AI proxy, not WebDAV)
 app.use('/api/sync', syncKeyAuth);
 app.use('/api/tasks', syncKeyAuth);
 app.use('/api/notifications', syncKeyAuth);
-app.use('/api/webdav', syncKeyAuth);
+// WebDAV uses its own Basic Auth via jianguoyun.com — no sync key needed
 
 // Default user ID (single-user mode, login removed)
 const DEFAULT_USER_ID = 1;

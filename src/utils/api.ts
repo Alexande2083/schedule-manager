@@ -22,9 +22,25 @@ async function request(path: string, options: RequestInit = {}) {
     headers,
   });
 
+  const contentType = res.headers.get('content-type') || '';
+  const isJson = contentType.includes('application/json');
+
+  // If server returns HTML instead of JSON (e.g., 502/504 proxy errors,
+  // CORS blocks, or fallback route returning index.html), provide a clear error
+  if (!isJson) {
+    const text = await res.text();
+    const isHtml = text.trim().startsWith('<');
+    if (isHtml) {
+      throw new Error(
+        '服务器返回了 HTML 页面而不是 JSON 数据。可能原因：1）服务器正在重启，请稍后重试；2）网络代理/防火墙拦截；3）请求路径错误。如果持续出现，请检查服务器是否正常运行。'
+      );
+    }
+    throw new Error(text || `请求失败 (${res.status})`);
+  }
+
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || '请求失败');
+    throw new Error(data.error || data.details?.join?.(', ') || '请求失败');
   }
   return data;
 }
