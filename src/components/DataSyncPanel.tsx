@@ -476,8 +476,14 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
                         });
                         setSyncStatus({ type: 'success', message: '已推送至服务器，即将刷新拉取最新数据...' });
                         setTimeout(() => { window.location.reload(); }, 1000);
-                      } catch (err) {
-                        setSyncStatus({ type: 'error', message: '同步失败：' + (err instanceof Error ? err.message : String(err)) });
+                      } catch (err: unknown) {
+                        const msg = err instanceof Error ? err.message : String(err);
+                        const friendly = msg.includes('Failed to fetch')
+                          ? '无法连接到服务器，可能正在部署中，请等待1分钟后重试'
+                          : msg.includes('HTML')
+                          ? '服务器正在重启，请稍后重试'
+                          : '同步失败：' + msg;
+                        setSyncStatus({ type: 'error', message: friendly });
                         setTimeout(() => setSyncStatus(null), 3000);
                       }
                     }}
@@ -542,15 +548,25 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ url: davUrl, username: davUser, password: davPass }),
                         });
-                        const data = await res.json();
+                        let data;
+                        try {
+                          data = await res.json();
+                        } catch {
+                          const text = await res.text();
+                          throw new Error(text?.trim()?.startsWith('<') ? '服务器返回了网页而不是数据，请稍后重试' : '响应解析失败');
+                        }
                         if (data.ok) {
                           setDavStatus({ type: 'success', message: '连接成功！' });
                           localStorage.setItem('sunsama-webdav', JSON.stringify({ url: davUrl, username: davUser, password: davPass }));
                         } else {
                           setDavStatus({ type: 'error', message: data.message });
                         }
-                      } catch (err) {
-                        setDavStatus({ type: 'error', message: '测试失败：' + (err instanceof Error ? err.message : String(err)) });
+                      } catch (err: unknown) {
+                        const msg = err instanceof Error ? err.message : String(err);
+                        const friendly = msg.includes('Failed to fetch')
+                          ? '无法连接到服务器，可能正在部署中，请等待1分钟后重试'
+                          : '测试失败：' + msg;
+                        setDavStatus({ type: 'error', message: friendly });
                       }
                     }}
                     className="px-3 py-2 rounded-lg text-xs font-medium bg-[var(--app-surface)] text-[var(--app-text)] border border-[var(--app-border)] hover:bg-[var(--app-surface-hover)] transition-all"
@@ -568,7 +584,11 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ url: davUrl, username: davUser, password: davPass }),
                         });
-                        const data = await res.json();
+                        let data;
+                        try { data = await res.json(); } catch {
+                          const text = await res.text();
+                          throw new Error(text?.trim()?.startsWith('<') ? '服务器正在部署，请稍后重试' : '拉取失败');
+                        }
                         if (data.error) {
                           setDavStatus({ type: 'error', message: data.error });
                           return;
@@ -581,8 +601,9 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
                           onImport(data.data);
                           setDavStatus({ type: 'success', message: '数据已从坚果云恢复' });
                         }
-                      } catch (err) {
-                        setDavStatus({ type: 'error', message: '拉取失败：' + (err instanceof Error ? err.message : String(err)) });
+                      } catch (err: unknown) {
+                        const msg = err instanceof Error ? err.message : String(err);
+                        setDavStatus({ type: 'error', message: msg.includes('Failed to fetch') ? '无法连接到服务器，请稍后重试' : msg });
                       }
                     }}
                     className="px-3 py-2 rounded-lg text-xs font-medium bg-[var(--app-surface)] text-[var(--app-text)] border border-[var(--app-border)] hover:bg-[var(--app-surface-hover)] transition-all"
@@ -612,14 +633,19 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ url: davUrl, username: davUser, password: davPass, content: JSON.stringify(payload) }),
                         });
-                        const data = await res.json();
+                        let data;
+                        try { data = await res.json(); } catch {
+                          const text = await res.text();
+                          throw new Error(text?.trim()?.startsWith('<') ? '服务器正在部署，请稍后重试' : '推送失败');
+                        }
                         if (data.success) {
                           setDavStatus({ type: 'success', message: '已推送至坚果云' });
                         } else {
                           setDavStatus({ type: 'error', message: data.error || '推送失败' });
                         }
-                      } catch (err) {
-                        setDavStatus({ type: 'error', message: '推送失败：' + (err instanceof Error ? err.message : String(err)) });
+                      } catch (err: unknown) {
+                        const msg = err instanceof Error ? err.message : String(err);
+                        setDavStatus({ type: 'error', message: msg.includes('Failed to fetch') ? '无法连接到服务器，请稍后重试' : msg });
                       }
                     }}
                     className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-[var(--app-accent)] text-white hover:brightness-110 transition-all"
