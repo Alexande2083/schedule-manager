@@ -26,10 +26,23 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
   const [syncStatus, setSyncStatus] = useState<{ type: 'idle' | 'syncing' | 'success' | 'error'; message: string } | null>(null);
 
   // WebDAV (坚果云) state
-  const [davUrl, setDavUrl] = useState('');
+  const WEBDAV_URL = 'https://dav.jianguoyun.com/dav/';
+  const [davUrl, setDavUrl] = useState(WEBDAV_URL);
   const [davUser, setDavUser] = useState('');
   const [davPass, setDavPass] = useState('');
   const [davStatus, setDavStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Load saved WebDAV credentials on mount (URL stays fixed)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sunsama-webdav');
+      if (saved) {
+        const cfg = JSON.parse(saved);
+        if (cfg.username) setDavUser(cfg.username);
+        if (cfg.password) setDavPass(cfg.password);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   const [syncUrl, setSyncUrl] = useState('');
   const [urlCopied, setUrlCopied] = useState(false);
@@ -513,9 +526,8 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
                   <input
                     type="text"
                     value={davUrl}
-                    onChange={e => setDavUrl(e.target.value)}
-                    placeholder="WebDAV 地址，如 https://dav.jianguoyun.com/dav/"
-                    className="w-full text-xs bg-[var(--app-input-bg)] rounded-lg px-3 py-2 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)]"
+                    readOnly
+                    className="w-full text-xs bg-[var(--app-input-bg)] rounded-lg px-3 py-2 border border-[var(--app-border)] text-[var(--app-text-muted)] outline-none cursor-default"
                   />
                   <div className="flex gap-2">
                     <input
