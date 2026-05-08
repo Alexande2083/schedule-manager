@@ -461,6 +461,10 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
 
   return (
     <div className="flex-1 flex min-w-0 min-h-0" onKeyDown={handleKeyDown} tabIndex={0}>
+      {/* VISIBLE marker to confirm component mounts */}
+      <div style={{ position: 'fixed', top: 0, left: 0, padding: '4px 8px', background: 'red', color: 'white', zIndex: 9999, fontSize: '11px' }}>
+        MindMap Mounted | rootId={data.rootId} | nodes={Object.keys(data.nodes).length}
+      </div>
       {/* ── Main canvas area ── */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Toolbar */}
