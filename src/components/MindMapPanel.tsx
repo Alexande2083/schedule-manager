@@ -460,13 +460,13 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
   const selectedNode = selectedId ? getNode(selectedId) : null;
 
   return (
-    <div className="flex-1 flex min-w-0 min-h-0" onKeyDown={handleKeyDown} tabIndex={0}>
+    <div className="h-full flex min-w-0" onKeyDown={handleKeyDown} tabIndex={0} style={{ minHeight: '60vh' }}>
       {/* VISIBLE marker to confirm component mounts */}
       <div style={{ position: 'fixed', top: 0, left: 0, padding: '4px 8px', background: 'red', color: 'white', zIndex: 9999, fontSize: '11px' }}>
         MindMap Mounted | rootId={data.rootId} | nodes={Object.keys(data.nodes).length}
       </div>
       {/* ── Main canvas area ── */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Toolbar */}
         <div className="flex items-center justify-between mb-2 px-1" data-mm-toolbar="true">
           <div>

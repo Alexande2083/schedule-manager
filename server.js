@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { z } from 'zod';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { initDb, getDb, saveDb, rowToTask, rowsToTasks } from './db.js';
@@ -15,11 +16,165 @@ const PORT = process.env.PORT || 3000;
 const SYNC_SECRET = process.env.SYNC_SECRET;
 const DEEPSEEK_API_KEY = process.env.AI_SUMMARY_KEY;
 const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com';
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const IS_PROD = NODE_ENV === 'production';
 
 // Enforce SYNC_SECRET
 if (!SYNC_SECRET) {
   console.error('❌ 未设置 SYNC_SECRET 环境变量，请在 Render 中配置');
   process.exit(1);
+}
+
+// ─── Security Middleware ────────────────────────────────────
+
+// HTTPS redirect (production only)
+app.use((req, res, next) => {
+  if (IS_PROD && req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(301, `https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
+
+// Security headers
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  if (IS_PROD) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  // Remove server fingerprint
+  res.removeHeader('X-Powered-By');
+  next();
+});
+
+// ─── Zod Validation Schemas ─────────────────────────────────
+
+const SyncSchema = z.object({
+  tasks: z.array(z.object({
+    id: z.string().min(1).max(100),
+    title: z.string().min(1).max(500),
+    completed: z.boolean().optional(),
+    date: z.string().optional(),
+    tag: z.string().max(50).optional(),
+    time: z.string().max(10).optional(),
+    duration: z.number().min(0).max(1440).optional(),
+    projectId: z.string().max(100).optional(),
+    pomodoros: z.number().min(0).max(100).optional(),
+    createdAt: z.number().optional(),
+    order: z.number().optional(),
+    importance: z.enum(['important', 'normal']).optional(),
+    urgency: z.enum(['urgent', 'normal']).optional(),
+    deadline: z.string().max(50).optional(),
+    repeat: z.enum(['none', 'daily', 'weekly', 'monthly', 'custom']).optional(),
+    pinned: z.boolean().optional(),
+    reminder: z.string().max(50).optional(),
+    completedAt: z.number().nullable().optional(),
+    checklistId: z.string().max(100).optional(),
+    parentId: z.string().max(100).optional(),
+    collapsed: z.boolean().optional(),
+    contexts: z.array(z.string().max(50)).optional(),
+    notes: z.string().max(10000).optional(),
+    repeatRule: z.string().max(200).optional(),
+    dependsOn: z.array(z.string().max(100)).optional(),
+  })).optional(),
+  projects: z.array(z.object({
+    id: z.string().min(1).max(100),
+    name: z.string().min(1).max(200),
+    color: z.string().max(20).optional(),
+  })).optional(),
+  checklists: z.array(z.object({
+    id: z.string().min(1).max(100),
+    name: z.string().min(1).max(200),
+    defaultTag: z.string().max(50).optional(),
+    order: z.number().optional(),
+    archived: z.boolean().optional(),
+  })).optional(),
+  tags: z.array(z.object({
+    id: z.string().min(1).max(100),
+    label: z.string().min(1).max(100),
+    color: z.string().max(20).optional(),
+  })).optional(),
+  contexts: z.array(z.object({
+    id: z.string().min(1).max(100),
+    label: z.string().min(1).max(100),
+    icon: z.string().max(50).optional(),
+    color: z.string().max(20).optional(),
+  })).optional(),
+  perspectives: z.array(z.object({
+    id: z.string().min(1).max(100),
+    name: z.string().min(1).max(200),
+    icon: z.string().max(50).optional(),
+    filters: z.record(z.any()).optional(),
+  })).optional(),
+});
+
+const TaskSchema = z.object({
+  id: z.string().min(1).max(100),
+  title: z.string().min(1).max(500),
+  completed: z.boolean().optional(),
+  date: z.string().max(50).optional(),
+  tag: z.string().max(50).optional(),
+  time: z.string().max(10).optional(),
+  duration: z.number().min(0).max(1440).optional(),
+  projectId: z.string().max(100).optional(),
+  pomodoros: z.number().min(0).max(100).optional(),
+  createdAt: z.number().optional(),
+  order: z.number().optional(),
+  importance: z.enum(['important', 'normal']).optional(),
+  urgency: z.enum(['urgent', 'normal']).optional(),
+  deadline: z.string().max(50).optional(),
+  repeat: z.enum(['none', 'daily', 'weekly', 'monthly', 'custom']).optional(),
+  pinned: z.boolean().optional(),
+  reminder: z.string().max(50).optional(),
+  completedAt: z.number().nullable().optional(),
+  checklistId: z.string().max(100).optional(),
+  parentId: z.string().max(100).optional(),
+  collapsed: z.boolean().optional(),
+  contexts: z.array(z.string().max(50)).optional(),
+  notes: z.string().max(10000).optional(),
+  repeatRule: z.string().max(200).optional(),
+  dependsOn: z.array(z.string().max(100)).optional(),
+});
+
+const MindMapExpandSchema = z.object({
+  nodeText: z.string().min(1).max(500),
+  parentContext: z.string().max(500).optional(),
+  mode: z.enum(['expand', 'breakdown', 'suggest']).optional(),
+});
+
+const WebDAVSchema = z.object({
+  url: z.string().url().max(500),
+  username: z.string().min(1).max(200),
+  password: z.string().min(1).max(200),
+  filename: z.string().max(200).optional(),
+  content: z.string().optional(),
+});
+
+const NotificationConfigSchema = z.object({
+  email: z.string().email().optional().or(z.literal('')),
+  webhookUrl: z.string().url().optional().or(z.literal('')),
+  enabled: z.boolean().optional(),
+  remindBeforeMinutes: z.number().min(1).max(120).optional(),
+  remindOnDeadline: z.boolean().optional(),
+  dailyDigest: z.boolean().optional(),
+});
+
+// Zod validation middleware factory
+function validate(schema) {
+  return (req, res, next) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({
+        error: '请求参数校验失败',
+        details: result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`),
+      });
+    }
+    req.body = result.data;
+    next();
+  };
 }
 
 // Sync key verification middleware (all /api routes)
@@ -78,7 +233,7 @@ app.get('/api/sync', (req, res) => {
   res.json({ tasks, projects, checklists, tags, contexts, perspectives });
 });
 
-app.post('/api/sync', (req, res) => {
+app.post('/api/sync', validate(SyncSchema), (req, res) => {
   const db = getDb();
   const uid = DEFAULT_USER_ID;
   const { tasks, projects, checklists, tags, contexts, perspectives } = req.body;
@@ -133,7 +288,7 @@ app.post('/api/sync', (req, res) => {
 });
 
 // ─── Individual Task CRUD ─────────────────────────────────
-app.post('/api/tasks', (req, res) => {
+app.post('/api/tasks', validate(TaskSchema), (req, res) => {
   const db = getDb();
   const uid = DEFAULT_USER_ID;
   const t = req.body;
@@ -148,6 +303,8 @@ app.post('/api/tasks', (req, res) => {
 });
 
 app.put('/api/tasks/:id', (req, res) => {
+  const { id } = req.params;
+  if (!id || id.length > 100) return res.status(400).json({ error: '无效的任务ID' });
   const db = getDb();
   const uid = DEFAULT_USER_ID;
   const t = req.body;
@@ -162,6 +319,8 @@ app.put('/api/tasks/:id', (req, res) => {
 });
 
 app.delete('/api/tasks/:id', (req, res) => {
+  const { id } = req.params;
+  if (!id || id.length > 100) return res.status(400).json({ error: '无效的任务ID' });
   const db = getDb();
   const uid = DEFAULT_USER_ID;
   try {
@@ -189,7 +348,7 @@ app.get('/api/notifications/config', (_req, res) => {
   res.json(config);
 });
 
-app.post('/api/notifications/config', (req, res) => {
+app.post('/api/notifications/config', validate(NotificationConfigSchema), (req, res) => {
   const config = {
     email: req.body.email || '',
     webhookUrl: req.body.webhookUrl || '',
@@ -257,7 +416,7 @@ function getWebDAVAuthHeader(username, password) {
 }
 
 // Test connection
-app.post('/api/webdav/test', async (req, res) => {
+app.post('/api/webdav/test', validate(WebDAVSchema.pick({ url: true, username: true, password: true })), async (req, res) => {
   const { url, username, password } = req.body;
   if (!url || !username || !password) {
     return res.status(400).json({ error: '请填写完整的 WebDAV 配置信息' });
@@ -386,7 +545,7 @@ app.post('/api/summary', async (req, res) => {
 });
 
 // ─── MindMap AI Expand ──────────────────────────────────────────
-app.post('/api/mindmap/expand', async (req, res) => {
+app.post('/api/mindmap/expand', validate(MindMapExpandSchema), async (req, res) => {
   if (!DEEPSEEK_API_KEY) {
     return res.status(500).json({ error: '服务器未配置 DEEPSEEK_API_KEY' });
   }
@@ -453,6 +612,9 @@ async function start() {
   app.listen(PORT, () => {
     console.log(`\n🚀 日程管理应用已启动`);
     console.log(`📡 端口: ${PORT}`);
+    console.log(`🔒 HTTPS: ${IS_PROD ? '✅ 已启用强制跳转' : '⚠️ 开发模式'}`);
+    console.log(`🛡️  安全头: ✅ 已设置`);
+    console.log(`✅ 参数校验: ✅ Zod schemas`);
     console.log(`🤖 AI 代理: ${DEEPSEEK_API_KEY ? '✅ 已配置' : '❌ 未配置'}`);
     console.log(`🌐 访问: http://localhost:${PORT}\n`);
   });

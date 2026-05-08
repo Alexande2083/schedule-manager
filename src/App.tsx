@@ -555,7 +555,7 @@ function App() {
         </div>
 
         {/* Scrollable Content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className={cn('flex-1', view !== 'mindmap' && 'overflow-y-auto')}>
           {view === 'checklist' ? (
             <div className="p-6">
               <ChecklistPanel
