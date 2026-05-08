@@ -1,8 +1,8 @@
-import { useMemo, memo, useCallback } from 'react';
+import { useMemo, memo, useCallback, useState } from 'react';
 import {
   CheckCircle2, Clock, Sparkles,
   ChevronLeft, ChevronRight, List, BarChart3,
-  Sun, Moon, Cloud,
+  Sun, Moon, Cloud, Zap, ArrowRight, Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Task, DisplayMode } from '@/types';
@@ -17,6 +17,7 @@ import { TaskTrendChart } from './TaskTrendChart';
 import { CompletionStatsPanel } from './CompletionStatsPanel';
 import { HeatmapPanel } from './HeatmapPanel';
 import type { TaskTemplate } from '@/hooks/useTaskTemplates';
+import type { ScheduledTask, WeeklyPlanData } from '@/hooks/useLearningSystem';
 
 interface DashboardProps {
   tasks: Task[];
@@ -44,6 +45,10 @@ interface DashboardProps {
   onAddSubTasks?: (parentId: string, steps: string[]) => void;
   onUpdatePriority?: (id: string, importance: 'important' | 'normal', urgency: 'urgent' | 'normal') => void;
   onReschedule?: (id: string, date: string) => void;
+  // Smart Scheduler & Weekly Plan (inline in dashboard)
+  onGenerateSchedule?: (date: string) => ScheduledTask[];
+  onGeneratePlan?: (goal: string) => WeeklyPlanData;
+  pendingTodayCount?: number;
 }
 
 export const Dashboard = memo(function Dashboard({
@@ -53,6 +58,7 @@ export const Dashboard = memo(function Dashboard({
   onAddTask, onOpenEdit,
   completedToday, tags, projects, contexts, templates, onReorderProjects,
   onApplySchedule, onAddSubTasks, onUpdatePriority, onReschedule,
+  onGenerateSchedule, onGeneratePlan, pendingTodayCount = 0,
 }: DashboardProps) {
   const isTodayView = view === 'today';
 
@@ -125,6 +131,36 @@ export const Dashboard = memo(function Dashboard({
     return blocks;
   }, [pendingTasks]);
 
+  // ─── Inline Smart Scheduler state ───
+  const [schedulerResult, setSchedulerResult] = useState<ScheduledTask[] | null>(null);
+  const [schedulerLoading, setSchedulerLoading] = useState(false);
+
+  const handleRunScheduler = () => {
+    if (!onGenerateSchedule) return;
+    setSchedulerLoading(true);
+    setTimeout(() => {
+      setSchedulerResult(onGenerateSchedule(selectedDate));
+      setSchedulerLoading(false);
+    }, 300);
+  };
+
+  // ─── Inline Weekly Plan state ───
+  const [planGoal, setPlanGoal] = useState('');
+  const [planResult, setPlanResult] = useState<WeeklyPlanData | null>(null);
+  const [planGenerating, setPlanGenerating] = useState(false);
+
+  const handleGeneratePlan = () => {
+    if (!onGeneratePlan || !planGoal.trim()) return;
+    setPlanGenerating(true);
+    setTimeout(() => {
+      setPlanResult(onGeneratePlan(planGoal.trim()));
+      setPlanGenerating(false);
+    }, 300);
+  };
+
+  const DAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  const totalSchedulerMinutes = schedulerResult?.reduce((sum, t) => sum + t.duration, 0) || 0;
+
   return (
     <div className="p-6 max-w-[1600px] mx-auto space-y-6 animate-fade-in">
       {/* ── Page Title ── */}
@@ -165,6 +201,97 @@ export const Dashboard = memo(function Dashboard({
               </div>
             )}
           </div>
+
+          {/* ── Inline Smart Scheduler + Weekly Plan (Today only) ── */}
+          {isTodayView && (
+            <div className="border-t border-[var(--color-border)] px-6 py-4 space-y-3">
+              {/* Scheduler */}
+              <div className="rounded-card border border-[var(--color-border)] p-4"
+                style={{ background: 'var(--color-bg-raised)' }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: '#22c55e' }}>
+                      <Zap size={12} className="text-white" />
+                    </div>
+                    <span className="text-xs font-semibold text-[var(--color-text)]">智能排程</span>
+                    {schedulerResult && (
+                      <span className="text-[10px] text-[var(--color-text-muted)]">{schedulerResult.length}项 · {totalSchedulerMinutes}min</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleRunScheduler}
+                    disabled={schedulerLoading || pendingTodayCount === 0}
+                    className="px-3 py-1.5 rounded text-[10px] font-medium text-white transition-colors duration-fast"
+                    style={{ background: schedulerLoading ? '#86d6a0' : '#22c55e' }}
+                  >
+                    {schedulerLoading ? '分析中...' : `排程 (${pendingTodayCount})`}
+                  </button>
+                </div>
+                {schedulerResult && schedulerResult.length > 0 && (
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {schedulerResult.map((task) => {
+                      const TimeIcon = (() => {
+                        const h = task.time.split(':')[0];
+                        if (['08','09','10','11'].includes(h)) return Sun;
+                        if (['12','13','14','15','16','17'].includes(h)) return Cloud;
+                        return Moon;
+                      })();
+                      return (
+                        <div key={task.id} className="flex items-center gap-2 px-2 py-1 rounded text-[11px]" style={{ background: 'var(--color-bg)' }}>
+                          <TimeIcon size={10} className="text-[var(--color-text-muted)]" />
+                          <span className="font-mono text-[var(--color-brand)] w-9 shrink-0">{task.time}</span>
+                          <span className="text-[var(--color-text)] truncate flex-1">{task.title}</span>
+                          <span className="text-[var(--color-text-muted)]">{task.duration}m</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {schedulerResult && schedulerResult.length === 0 && (
+                  <p className="text-[11px] text-[var(--color-text-muted)] text-center py-2">暂无排程建议</p>
+                )}
+              </div>
+
+              {/* Weekly Plan */}
+              <div className="rounded-card border border-[var(--color-border)] p-4"
+                style={{ background: 'var(--color-bg-raised)' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: '#8b5cf6' }}>
+                    <Target size={12} className="text-white" />
+                  </div>
+                  <span className="text-xs font-semibold text-[var(--color-text)]">周计划</span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                  <input
+                    value={planGoal}
+                    onChange={e => setPlanGoal(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleGeneratePlan()}
+                    placeholder="输入目标，AI拆分到每天"
+                    className="input text-xs flex-1"
+                    style={{ height: '32px' }}
+                  />
+                  <button
+                    onClick={handleGeneratePlan}
+                    disabled={planGenerating || !planGoal.trim()}
+                    className="px-3 py-1.5 rounded text-[10px] font-medium text-white transition-colors duration-fast shrink-0"
+                    style={{ background: planGenerating ? '#b09beb' : '#8b5cf6' }}
+                  >
+                    {planGenerating ? '生成中' : '生成计划'} <ArrowRight size={10} className="inline ml-0.5" />
+                  </button>
+                </div>
+                {planResult && (
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {planResult.days.slice(0, 7).map((dayPlan, i) => (
+                      <div key={i} className="flex items-start gap-2 px-2 py-1.5 rounded text-[11px]" style={{ background: 'var(--color-bg)' }}>
+                        <span className="text-[var(--color-brand)] font-medium w-8 shrink-0">{DAY_LABELS[i] || `D${i+1}`}</span>
+                        <span className="text-[var(--color-text)]">{dayPlan.focusArea || dayPlan.dayLabel}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Time Blocks + Weather + Calendar (Level 2) */}

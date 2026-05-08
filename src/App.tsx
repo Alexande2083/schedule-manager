@@ -34,8 +34,6 @@ import { DailyReviewModal } from '@/components/DailyReviewModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { HabitsPanel } from '@/components/HabitsPanel';
 import { UserInsights } from '@/components/UserInsights';
-import { WeeklyPlan } from '@/components/WeeklyPlan';
-import { SmartScheduler } from '@/components/SmartScheduler';
 import { useHabits } from '@/hooks/useHabits';
 import { useLearningSystem } from '@/hooks/useLearningSystem';
 import type { ThemeColor } from '@/types';
@@ -585,11 +583,6 @@ function App() {
             </div>
           ) : view === 'insights' ? (
             <UserInsights insights={{ profile: learning.profile, timeSlotStats: learning.timeSlotStats, tagStats: learning.tagStats, weeklyTrend: learning.weeklyTrend, optimizationTips: learning.optimizationTips }} />
-          ) : view === 'weeklyplan' ? (
-            <WeeklyPlan onGenerate={learning.generateWeeklyPlan} />
-          ) : view === 'scheduler' ? (
-            <SmartScheduler date={selectedDate} onGenerate={learning.generateSmartSchedule}
-              pendingCount={learning.pendingTasks.filter(t => t.date === selectedDate).length} />
           ) : (
             <Dashboard
               tasks={contextFilteredTasks} selectedDate={selectedDate} view={view as 'today' | 'week'} displayMode={displayMode}
@@ -600,6 +593,9 @@ function App() {
               onOpenEdit={setEditingTask} onReorderProjects={setProjects}
               onApplySchedule={handleApplySchedule} onAddSubTasks={handleAddSubTasks}
               onUpdatePriority={handleUpdatePriority} onReschedule={handleReschedule}
+              onGenerateSchedule={learning.generateSmartSchedule}
+              onGeneratePlan={learning.generateWeeklyPlan}
+              pendingTodayCount={learning.pendingTasks.filter(t => t.date === selectedDate).length}
             />
           )}
         </main>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, CalendarDays, ListChecks, TreePine, Eye, View,
-  Flame, Brain, Calendar, Zap,
+  Flame, Brain,
   FolderKanban, Tag, MapPin, ChevronDown, ChevronRight,
   Plus, X, Settings,
 } from 'lucide-react';
@@ -16,8 +16,6 @@ const NAV_ITEMS = [
   { id: 'perspectives', label: '透视', icon: Eye },
   { id: 'habits', label: '习惯', icon: Flame },
   { id: 'insights', label: '洞察', icon: Brain },
-  { id: 'weeklyplan', label: '计划', icon: Calendar },
-  { id: 'scheduler', label: '排程', icon: Zap },
   { id: 'review', label: '回顾', icon: View },
 ];
 
