@@ -27,7 +27,7 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
 
   // WebDAV (坚果云) state
   const WEBDAV_URL = 'https://dav.jianguoyun.com/dav/';
-  const [davUrl, setDavUrl] = useState(WEBDAV_URL);
+  const davUrl = WEBDAV_URL;
   const [davUser, setDavUser] = useState('');
   const [davPass, setDavPass] = useState('');
   const [davStatus, setDavStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
