@@ -120,17 +120,39 @@ export function WeatherTimeWidget() {
     } catch { setError(true); } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
+  // Track if user has denied location so we can show a helpful message
+  const [locationDenied, setLocationDenied] = useState(false);
+
+  const tryGeolocate = useCallback(() => {
+    setLocationDenied(false);
+    setLoading(true);
+    setError(false);
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude),
-        () => fetchWeather(39.9042, 116.4074, '北京'),
-        { timeout: 8000 }
+        (err) => {
+          // PERMISSION_DENIED: user denied or previously denied location access
+          if (err.code === err.PERMISSION_DENIED) {
+            setLocationDenied(true);
+            setLoading(false);
+            setError(true);
+          } else {
+            // TIMEOUT or POSITION_UNAVAILABLE: fallback gracefully
+            fetchWeather(39.9042, 116.4074, '北京');
+          }
+        },
+        { timeout: 8000, enableHighAccuracy: false }
       );
-    } else { fetchWeather(39.9042, 116.4074, '北京'); }
+    } else {
+      fetchWeather(39.9042, 116.4074, '北京');
+    }
   }, [fetchWeather]);
+
+  useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+    tryGeolocate();
+  }, [tryGeolocate]);
 
   const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
   const dateStr = `${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
@@ -168,8 +190,20 @@ export function WeatherTimeWidget() {
             </div>
           ) : error || !weather ? (
             <div className="flex items-center justify-between py-1">
-              <span className="text-[11px] text-[var(--app-text-muted)]">天气获取失败</span>
-              <button onClick={() => fetchWeather(39.9042, 116.4074, '北京')} className="text-[11px] text-[var(--app-accent)] hover:underline">重试</button>
+              {locationDenied ? (
+                <div className="flex-1">
+                  <div className="text-[11px] text-amber-600 font-medium">定位权限未授权</div>
+                  <div className="text-[10px] text-[var(--app-text-muted)] mt-0.5 leading-relaxed">
+                    请在浏览器设置中允许本站访问位置信息，或点击重试
+                  </div>
+                </div>
+              ) : (
+                <span className="text-[11px] text-[var(--app-text-muted)]">天气获取失败</span>
+              )}
+              <button onClick={tryGeolocate} className="shrink-0 ml-2 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[var(--app-accent)]/10 text-[var(--app-accent)] hover:bg-[var(--app-accent)]/20 transition-colors">
+                <Navigation size={10} className="inline mr-1" />
+                重新定位
+              </button>
             </div>
           ) : (
             <>
