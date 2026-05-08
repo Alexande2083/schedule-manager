@@ -29,6 +29,7 @@ import { NotificationSettings } from '@/components/NotificationSettings';
 import { TaskEditModal } from '@/components/TaskEditModal';
 import { SearchModal } from '@/components/SearchModal';
 import { BackupReminder } from '@/components/BackupReminder';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MobileEditDrawer } from '@/components/MobileEditDrawer';
 import { DailyReviewModal } from '@/components/DailyReviewModal';
 import { SettingsModal } from '@/components/SettingsModal';
@@ -37,6 +38,7 @@ import { UserInsights } from '@/components/UserInsights';
 import { WeeklyAnalytics } from '@/components/WeeklyAnalytics';
 import { useHabits } from '@/hooks/useHabits';
 import { useLearningSystem } from '@/hooks/useLearningSystem';
+import { useNotifications } from '@/hooks/useNotifications';
 import type { ThemeColor } from '@/types';
 
 interface AppTheme {
@@ -244,54 +246,7 @@ function App() {
   const { processCompletedRepeatTask } = useRepeatTasks(tasks, setTasks);
   const habits = useHabits();
   const learning = useLearningSystem(tasks);
-
-  // Notification permission & reminder checker (deadline + pomodoro)
-  const notifiedTasksRef = useRef<Set<string>>(new Set());
-  // Use ref to access latest pomodoro values without triggering effect re-runs
-  const pomodoroRef = useRef(pomodoro);
-  pomodoroRef.current = pomodoro;
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-    const interval = setInterval(() => {
-      if (Notification.permission !== 'granted') return;
-      const now = new Date();
-      tasks.forEach(task => {
-        if (task.completed) return;
-        if (task.reminder) {
-          const reminderTime = new Date(task.reminder);
-          if (reminderTime <= now && reminderTime > new Date(now.getTime() - 60000)) {
-            new Notification('任务提醒', { body: task.title, icon: '/favicon.ico', tag: task.id });
-          }
-        }
-        if (task.deadline && task.time) {
-          const [h, m] = task.time.split(':').map(Number);
-          const deadlineDate = new Date(task.deadline);
-          deadlineDate.setHours(h, m, 0, 0);
-          const diffMs = deadlineDate.getTime() - now.getTime();
-          const key = `deadline-${task.id}`;
-          if (diffMs > 0 && diffMs <= 15 * 60000 && !notifiedTasksRef.current.has(key)) {
-            notifiedTasksRef.current.add(key);
-            new Notification('截止提醒', {
-              body: `「${task.title}」将在15分钟后截止`,
-              icon: '/favicon.ico',
-              tag: key,
-            });
-          }
-        }
-      });
-      const p = pomodoroRef.current;
-      if (p.isRunning && p.minutes === 1 && p.seconds === 0) {
-        new Notification('番茄钟即将结束', {
-          body: '还有1分钟，准备休息一下',
-          icon: '/favicon.ico',
-          tag: 'pomodoro-end',
-        });
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [tasks]);
+  useNotifications({ tasks, pomodoro });
 
   // Apply context + project filter to tasks passed to TaskPanel
   const contextFilteredTasks = useMemo(() => {
@@ -520,6 +475,7 @@ function App() {
   }, [tasks]);
 
   return (
+    <ErrorBoundary>
     <div className="h-screen flex overflow-hidden" style={{ background: 'var(--color-bg)' }}>
       {/* Backup Reminder Banner */}
       <BackupReminder onOpenSync={() => setSyncOpen(true)} />
@@ -793,6 +749,7 @@ function App() {
         onSetDuration={pomodoro.setDuration}
        />
     </div>
+    </ErrorBoundary>
   );
 }
 
