@@ -82,10 +82,17 @@
 
 ## 数据同步
 
-- **云同步** — 加密上传，多设备共享
-- **链接同步** — LZString 压缩，微信/钉钉分享
-- **JSON 备份** — 导入导出
-- **PWA** — 可安装到桌面
+| 方式 | 说明 |
+|------|------|
+| **云同步** | 加密上传/下载，多设备共享（需配置 `SYNC_SECRET`） |
+| **坚果云同步** | WebDAV 协议，后端代理绕过 CORS |
+| **剪贴板同步** | LZString 压缩，微信/钉钉/邮件粘贴恢复 |
+| **链接同步** | URL 分享，跨设备一键导入 |
+| **JSON 备份** | 导入导出完整数据 |
+| **ICS 导出** | 导出日历格式，可导入 Outlook/Google Calendar |
+| **Markdown 周报** | 生成每周工作汇报 |
+| **自动备份** | 定时备份到浏览器 localStorage |
+| **PWA** | 可安装到桌面，离线使用 |
 
 ---
 
@@ -109,6 +116,18 @@
 
 所有 AI 请求经后端代理，API Key 不暴露到前端。
 
+## API 端点
+
+| 端点 | 认证 | 用途 |
+|------|------|------|
+| `GET/POST /api/sync` | `x-sync-key` | 云同步数据 |
+| `POST /api/tasks` | `x-sync-key` | 创建任务 |
+| `PUT /api/tasks/:id` | `x-sync-key` | 更新任务 |
+| `DELETE /api/tasks/:id` | `x-sync-key` | 删除任务 |
+| `POST /api/webdav/push` | Basic Auth | 坚果云推送 |
+| `POST /api/webdav/pull` | Basic Auth | 坚果云拉取 |
+| `GET /api/health` | 无 | 健康检查 |
+
 ## 快速开始
 
 ```bash
@@ -122,11 +141,11 @@ npm run server   # 启动服务
 
 | 变量 | 说明 | 必需 |
 |------|------|------|
-| `DEEPSEEK_API_KEY` | DeepSeek API Key | ❌ |
-| `AI_SUMMARY_KEY` | AI Summary Key（同 DeepSeek） | ❌ |
+| `SYNC_SECRET` | 云同步密钥，客户端 `x-sync-key` 需一致 | ✅ |
+| `AI_SUMMARY_KEY` | DeepSeek API Key | ❌ |
 | `DEEPSEEK_BASE_URL` | API 地址（默认 api.deepseek.com） | ❌ |
-| `JWT_SECRET` | 云同步 JWT 密钥 | ❌ |
 | `PORT` | 服务端口（默认 3000） | ❌ |
+| `NODE_ENV` | 环境（production 启用 HTTPS 跳转/安全头） | ❌ |
 
 ## 链接
 
@@ -136,14 +155,13 @@ npm run server   # 启动服务
 ## 项目结构
 
 ```
-├── public/              # 静态资源（PWA manifest, icons）
+├── public/              # 静态资源（PWA manifest, icons, sw.js）
 ├── src/
 │   ├── components/
-│   │   ├── Dashboard.tsx              # Today 页面
+│   │   ├── Dashboard.tsx              # Today 仪表盘
 │   │   ├── WeeklyAnalytics.tsx        # Week 分析页面（7 模块）
 │   │   ├── MindMapPanel.tsx           # AI 项目规划白板
 │   │   ├── Sidebar.tsx                # 侧栏导航
-│   │   ├── DailyAutoPanel.tsx         # AI 今日简报
 │   │   ├── CalendarPanel.tsx          # 日历（农历+节气）
 │   │   ├── HeatmapPanel.tsx           # GitHub 风格热力图
 │   │   ├── TaskTrendChart.tsx         # 完成趋势图
@@ -154,21 +172,32 @@ npm run server   # 启动服务
 │   │   ├── ReviewPanel.tsx            # 任务回顾
 │   │   ├── ChecklistPanel.tsx         # 清单管理
 │   │   ├── PerspectivesPanel.tsx      # 透视视图
+│   │   ├── SmartScheduler.tsx         # 智能排程
+│   │   ├── WeeklyPlan.tsx             # 周计划生成
+│   │   ├── TimeBlockingPanel.tsx      # 时间块规划
+│   │   ├── QuadrantPanel.tsx          # 四象限视图
+│   │   ├── CountdownPanel.tsx         # 倒计时
+│   │   ├── ForecastPanel.tsx          # 预测分析
+│   │   ├── WeatherTimeWidget.tsx      # 天气时间
 │   │   ├── PomodoroModal.tsx          # 番茄钟
 │   │   ├── AIParserModal.tsx          # AI 任务解析
 │   │   ├── AISummaryModal.tsx         # AI 工作总结
-│   │   ├── SettingsModal.tsx          # 设置（数据/主题/字体）
-│   │   ├── ThemeSettings.tsx          # 高级主题设置
-│   │   ├── DataSyncPanel.tsx          # 云同步
+│   │   ├── SettingsModal.tsx          # 设置面板
+│   │   ├── ThemeSettings.tsx          # 主题设置
+│   │   ├── NotificationSettings.tsx   # 通知设置
+│   │   ├── DataSyncPanel.tsx          # 数据同步（云/坚果云/剪贴板/JSON）
 │   │   ├── SearchModal.tsx            # 全局搜索
+│   │   ├── BackupReminder.tsx         # 备份提醒
+│   │   ├── ErrorBoundary.tsx          # 错误边界
 │   │   ├── MobileHeader.tsx           # 移动端顶部
 │   │   ├── MobileBottomNav.tsx        # 移动端底部导航
 │   │   ├── MobileSidebarDrawer.tsx    # 移动端侧栏
 │   │   └── ui/                        # shadcn/ui 基础组件
-│   ├── hooks/            # useLearningSystem, useHabits, useCloudSync, usePomodoro 等
+│   ├── hooks/            # useCloudSync, useHabits, useLearningSystem, usePomodoro 等
 │   ├── types/            # TypeScript 类型定义
-│   └── utils/            # 工具函数
-├── server.js             # Express 后端（API 代理 + SQLite）
-├── db.js                 # 数据库初始化
-└── render.yaml           # Render 部署配置
+│   └── utils/            # api, export, storage, webdav, date 工具
+├── server.js             # Express 后端（Zod 校验 + 安全头 + AI 代理 + WebDAV）
+├── db.js                 # SQLite 初始化（WAL 模式 + 损坏恢复）
+├── render.yaml           # Render 部署配置
+└── data.db               # SQLite 数据库文件
 ```
