@@ -1,8 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import {
   Check, Trash2, Clock, Tag, GripVertical, FolderOpen, Flag,
   AlertTriangle, Calendar, ChevronDown, ChevronRight, Square, CheckSquare,
-  Monitor, Smartphone, Building2, Car, Users, Home
+  Monitor, Smartphone, Building2, Car, Users, Home, Link2
 } from 'lucide-react';
 import { format, parseISO, isToday, isPast, differenceInDays } from 'date-fns';
 import type { Task, Context } from '@/types';
@@ -18,6 +18,7 @@ interface TaskItemProps {
   tags: Record<string, { label: string; color: string }>;
   projects: Project[];
   contexts?: Context[];
+  allTasks?: Task[];
   collapsedTasks?: Set<string>;
   onToggleCollapsed?: (id: string) => void;
   onToggle: (id: string) => void;
@@ -32,7 +33,7 @@ interface TaskItemProps {
 }
 
 export function TaskItem({
-  task, tags, projects, contexts, collapsedTasks, onToggleCollapsed,
+  task, tags, projects, contexts, allTasks, collapsedTasks, onToggleCollapsed,
   onToggle, onDelete, onEdit, onOpenEdit, getChildTasks, level = 0,
   selected, selectionMode, onToggleSelect,
 }: TaskItemProps) {
@@ -63,6 +64,15 @@ export function TaskItem({
   };
 
   const deadlineInfo = getDeadlineInfo();
+
+  // Dependency status
+  const dependencyTasks = useMemo(() => {
+    if (!task.dependsOn || task.dependsOn.length === 0) return [];
+    return (allTasks || []).filter(t => task.dependsOn!.includes(t.id));
+  }, [task.dependsOn, allTasks]);
+
+  const allDepsCompleted = dependencyTasks.length > 0 && dependencyTasks.every(t => t.completed);
+  const waitingCount = dependencyTasks.filter(t => !t.completed).length;
 
   const handleDoubleClick = () => {
     if (!task.completed) {
@@ -97,17 +107,17 @@ export function TaskItem({
       {selectionMode && (
         <button
           onClick={() => onToggleSelect?.(task.id)}
-          className="float-left mt-3.5 mr-2 text-[var(--app-text-muted)] hover:text-[#d4857a] transition-colors"
+          className="float-left mt-3.5 mr-2 text-[var(--app-text-muted)] hover:text-[var(--app-accent)] transition-colors"
         >
-          {selected ? <CheckSquare size={18} className="text-[#d4857a]" /> : <Square size={18} />}
+          {selected ? <CheckSquare size={18} className="text-[var(--app-accent)]" /> : <Square size={18} />}
         </button>
       )}
 
       <div
         className={cn(
-          'glass-panel group flex items-start gap-2 p-3 rounded-xl bg-[var(--app-surface)] border border-[var(--app-border)] hover:border-[var(--app-border-hover)]/30 transition-all duration-200 hover:shadow-sm',
-          task.completed && 'opacity-60 bg-[var(--app-surface-hover)]',
-          level > 0 && 'ml-6 border-l-2 border-l-[var(--app-accent)]/20'
+          'group flex items-start gap-3 p-3.5 rounded-xl bg-[var(--app-surface)] border border-[var(--app-border)] hover:border-[var(--app-border-hover)]/30 transition-all duration-200 hover:shadow-sm shadow-[0_1px_3px_rgba(0,0,0,0.04)]',
+          task.completed && 'opacity-55 bg-[var(--app-surface-hover)]',
+          level > 0 && 'ml-7 border-l-[3px] border-l-[var(--app-accent)]/25'
         )}
       >
         {/* Expand/collapse button */}
@@ -116,30 +126,30 @@ export function TaskItem({
             onClick={() => onToggleCollapsed?.(task.id)}
             className="mt-0.5 text-[var(--app-text-muted)] hover:text-[var(--app-text)] transition-colors shrink-0"
           >
-            {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+            {isCollapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
           </button>
         ) : (
-          <div className="w-4 shrink-0" />
+          <div className="w-3.5 shrink-0" />
         )}
 
         {/* Drag handle */}
         <div
           className="mt-0.5 cursor-grab active:cursor-grabbing text-[var(--app-text-muted)] hover:text-[var(--app-text-secondary)] transition-colors shrink-0"
         >
-          <GripVertical size={16} />
+          <GripVertical size={15} />
         </div>
 
         {/* Checkbox */}
         <button
           onClick={() => onToggle(task.id)}
           className={cn(
-            'mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 shrink-0',
+            'mt-0.5 w-[18px] h-[18px] rounded-md border-2 flex items-center justify-center transition-all duration-200 shrink-0',
             task.completed
               ? 'bg-[#8cc68a] border-[#8cc68a]'
-              : 'border-[var(--app-border)] hover:border-[#d4857a]'
+              : 'border-[var(--app-border)] hover:border-[var(--app-accent)]'
           )}
         >
-          {task.completed && <Check size={12} className="text-white" />}
+          {task.completed && <Check size={11} className="text-white" />}
         </button>
 
         <div className="flex-1 min-w-0">
@@ -150,7 +160,7 @@ export function TaskItem({
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleSave}
               onKeyDown={handleKeyDown}
-              className="w-full text-sm font-medium text-[var(--app-text)] bg-transparent outline-none border-b border-[#d4857a]"
+              className="w-full text-sm font-medium text-[var(--app-text)] bg-transparent outline-none border-b border-[var(--app-accent)]"
             />
           ) : (
             <div
@@ -160,7 +170,7 @@ export function TaskItem({
             >
               <span
                 className={cn(
-                  'text-sm font-medium transition-all duration-300',
+                  'text-sm font-medium leading-relaxed transition-all duration-300',
                   task.completed ? 'text-[var(--app-text-muted)] line-through' : 'text-[var(--app-text)]'
                 )}
               >
@@ -169,9 +179,9 @@ export function TaskItem({
             </div>
           )}
 
-          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+          <div className="flex items-center gap-2.5 mt-2 flex-wrap">
             {task.time && (
-              <span className="flex items-center gap-1 text-xs text-[var(--app-text-muted)]">
+              <span className="flex items-center gap-1 text-[11px] text-[var(--app-text-muted)]">
                 <Clock size={10} />
                 {task.time} · {task.duration || 60}min
               </span>
@@ -182,14 +192,14 @@ export function TaskItem({
               className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium text-white"
               style={{ backgroundColor: tagInfo.color }}
             >
-              <Tag size={8} className="mr-1" />
+              <Tag size={8} className="mr-0.5" />
               {tagInfo.label}
             </span>
 
             {/* Project */}
             {project && (
-              <span className="flex items-center gap-1 text-[10px] text-[var(--app-text-muted)]">
-                <FolderOpen size={8} style={{ color: project.color }} />
+              <span className="flex items-center gap-1 text-[11px] text-[var(--app-text-muted)]">
+                <FolderOpen size={9} style={{ color: project.color }} />
                 {project.name}
               </span>
             )}
@@ -211,7 +221,7 @@ export function TaskItem({
 
             {/* Importance */}
             {task.importance === 'important' && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-50 text-red-600">
                 <Flag size={8} />
                 重要
               </span>
@@ -219,7 +229,7 @@ export function TaskItem({
 
             {/* Urgency */}
             {task.urgency === 'urgent' && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-700">
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-50 text-orange-600">
                 <AlertTriangle size={8} />
                 紧急
               </span>
@@ -235,20 +245,39 @@ export function TaskItem({
 
             {/* Repeat */}
             {task.repeat && task.repeat !== 'none' && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700">
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-600">
                 重复
               </span>
             )}
 
             {/* Subtask count */}
             {hasChildren && (
-              <span className="text-[10px] text-[var(--app-text-muted)]">
+              <span className="text-[11px] text-[var(--app-text-muted)]">
                 {children.filter(c => c.completed).length}/{children.length} 子任务
               </span>
             )}
 
+            {/* Dependency status */}
+            {dependencyTasks.length > 0 && (
+              <span
+                className={cn(
+                  'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium',
+                  allDepsCompleted
+                    ? 'bg-green-50 text-green-600'
+                    : 'bg-amber-50 text-amber-600'
+                )}
+                title={dependencyTasks.map(t => t.title).join('、')}
+              >
+                <Link2 size={8} />
+                {allDepsCompleted
+                  ? '依赖已完成'
+                  : `等待 ${waitingCount} 个依赖`
+                }
+              </span>
+            )}
+
             {task.pomodoros > 0 && (
-              <span className="text-xs text-[#d4857a] font-medium">
+              <span className="text-[11px] text-[var(--app-accent)] font-medium">
                 {task.pomodoros} 番茄
               </span>
             )}
@@ -257,7 +286,7 @@ export function TaskItem({
 
         <button
           onClick={() => onDelete(task.id)}
-          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-[var(--app-text-muted)] hover:text-red-500 hover:bg-red-50 transition-all duration-200 shrink-0"
+          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-[var(--app-text-muted)] hover:text-red-500 hover:bg-red-50 transition-all duration-200 shrink-0 self-start"
         >
           <Trash2 size={14} />
         </button>
@@ -271,6 +300,7 @@ export function TaskItem({
           tags={tags}
           projects={projects}
           contexts={contexts}
+          allTasks={allTasks}
           collapsedTasks={collapsedTasks}
           onToggleCollapsed={onToggleCollapsed}
           onToggle={onToggle}

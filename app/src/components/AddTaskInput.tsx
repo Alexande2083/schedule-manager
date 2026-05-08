@@ -72,7 +72,7 @@ export function AddTaskInput({ selectedDate, tags, projects, contexts, templates
   return (
     <div className="glass-panel bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] p-3 shadow-sm">
       <div className="flex items-center gap-2">
-        <Plus size={18} className="text-[#d4857a] shrink-0" />
+        <Plus size={18} className="text-[var(--app-accent)] shrink-0" />
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -87,7 +87,7 @@ export function AddTaskInput({ selectedDate, tags, projects, contexts, templates
           className={cn(
             'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
             title.trim()
-              ? 'bg-[#d4857a] text-white hover:bg-[#c97a6e]'
+              ? 'bg-[var(--app-accent)] text-white hover:bg-[var(--app-accent-hover)]'
               : 'bg-[var(--app-border)] text-[var(--app-text-placeholder)] cursor-not-allowed'
           )}
         >
@@ -112,7 +112,7 @@ export function AddTaskInput({ selectedDate, tags, projects, contexts, templates
                       setUrgency(tmpl.urgency);
                       setSelectedProject(tmpl.projectId || '');
                     }}
-                    className="px-2 py-0.5 rounded text-[10px] font-medium bg-[var(--app-surface-hover)] text-[var(--app-text-muted)] hover:bg-[#d4857a]/10 hover:text-[#d4857a] border border-[var(--app-border)] transition-all"
+                    className="px-2 py-0.5 rounded text-[10px] font-medium bg-[var(--app-surface-hover)] text-[var(--app-text-muted)] hover:bg-[var(--app-accent)]/10 hover:text-[var(--app-accent)] border border-[var(--app-border)] transition-all"
                   >
                     {tmpl.name}
                   </button>
@@ -127,7 +127,7 @@ export function AddTaskInput({ selectedDate, tags, projects, contexts, templates
               type="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="text-[11px] bg-[var(--app-input-bg)] rounded-md px-1.5 py-0.5 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[#d4857a]"
+              className="text-[11px] bg-[var(--app-input-bg)] rounded-md px-1.5 py-0.5 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[var(--app-accent)]"
             />
           </div>
 
@@ -137,7 +137,7 @@ export function AddTaskInput({ selectedDate, tags, projects, contexts, templates
             <select
               value={duration}
               onChange={(e) => setDuration(Number(e.target.value))}
-              className="text-[11px] bg-[var(--app-input-bg)] rounded-md px-1.5 py-0.5 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[#d4857a]"
+              className="text-[11px] bg-[var(--app-input-bg)] rounded-md px-1.5 py-0.5 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[var(--app-accent)]"
             >
               <option value={15}>15分</option>
               <option value={30}>30分</option>
@@ -155,7 +155,7 @@ export function AddTaskInput({ selectedDate, tags, projects, contexts, templates
             <select
               value={selectedProject}
               onChange={(e) => setSelectedProject(e.target.value)}
-              className="text-[11px] bg-[var(--app-input-bg)] rounded-md px-1.5 py-0.5 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[#d4857a]"
+              className="text-[11px] bg-[var(--app-input-bg)] rounded-md px-1.5 py-0.5 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[var(--app-accent)]"
             >
               <option value="">无项目</option>
               {projects.map((p) => (
@@ -171,7 +171,7 @@ export function AddTaskInput({ selectedDate, tags, projects, contexts, templates
               type="date"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="text-[11px] bg-[var(--app-input-bg)] rounded-md px-1.5 py-0.5 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[#d4857a]"
+              className="text-[11px] bg-[var(--app-input-bg)] rounded-md px-1.5 py-0.5 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[var(--app-accent)]"
             />
           </div>
 
@@ -265,7 +265,7 @@ export function AddTaskInput({ selectedDate, tags, projects, contexts, templates
               onChange={(e) => setNotes(e.target.value)}
               placeholder="添加备注..."
               rows={2}
-              className="flex-1 text-[11px] bg-[var(--app-input-bg)] rounded-md px-2 py-1 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[#d4857a] resize-none placeholder:text-[var(--app-text-placeholder)]"
+              className="flex-1 text-[11px] bg-[var(--app-input-bg)] rounded-md px-2 py-1 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[var(--app-accent)] resize-none placeholder:text-[var(--app-text-placeholder)]"
             />
           </div>
         </div>

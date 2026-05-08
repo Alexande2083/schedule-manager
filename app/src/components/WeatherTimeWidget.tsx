@@ -141,21 +141,21 @@ export function WeatherTimeWidget() {
   const CurrentIcon = currentWeather?.icon || Cloud;
 
   return (
-    <div className="weather-glass glass-panel relative rounded-2xl overflow-hidden bg-[var(--app-surface)]" style={{ backdropFilter: 'blur(32px) saturate(1.8)', WebkitBackdropFilter: 'blur(32px) saturate(1.8)' }}>
+    <div className="weather-glass glass-panel relative rounded-xl overflow-hidden bg-[var(--app-surface)]" style={{ backdropFilter: 'blur(28px) saturate(1.6)', WebkitBackdropFilter: 'blur(28px) saturate(1.6)' }}>
       {/* 液态玻璃：顶部高光 */}
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent pointer-events-none" />
       {/* 液态玻璃：左侧边缘光 */}
       <div className="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-white/30 via-transparent to-transparent pointer-events-none" />
 
-      <div className="p-4 relative z-10">
+      <div className="p-3 relative z-10">
         {/* 时间 + 日期 */}
-        <div className="flex items-baseline justify-between mb-3">
-          <div className="text-[30px] font-bold tabular-nums tracking-tight text-[var(--app-text)] leading-none">
+        <div className="flex items-baseline justify-between mb-2">
+          <div className="text-[20px] font-semibold tabular-nums tracking-tight text-[var(--app-text)] leading-none">
             {timeStr}
           </div>
           <div className="text-right">
-            <div className="text-[13px] font-semibold text-[var(--app-text)]">{dateStr}</div>
-            <div className="text-[11px] text-[var(--app-text-muted)] mt-0.5">{weekStr} · {lunar.toString()}</div>
+            <div className="text-[12px] font-medium text-[var(--app-text-secondary)]">{dateStr}</div>
+            <div className="text-[10px] text-[var(--app-text-muted)] mt-0.5">{weekStr} · {lunar.toString()}</div>
           </div>
         </div>
 
@@ -174,24 +174,24 @@ export function WeatherTimeWidget() {
           ) : (
             <>
               {/* 当前天气 */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="relative w-10 h-10 flex items-center justify-center">
-                    <CurrentIcon size={32} className="text-[var(--app-accent)]" strokeWidth={1.5} />
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div className="relative w-8 h-8 flex items-center justify-center">
+                    <CurrentIcon size={22} className="text-[var(--app-accent)]" strokeWidth={1.5} />
                     {weather.currentCode === 0 && (
                       <div className="absolute inset-0 rounded-full bg-[var(--app-accent)]/15 animate-ping" style={{ animationDuration: '3s' }} />
                     )}
                   </div>
                   <div>
-                    <div className="text-[13px] font-semibold text-[var(--app-text)]">{currentWeather?.label}</div>
-                    <div className="flex items-center gap-1 text-[11px] text-[var(--app-text-muted)]">
-                      <MapPin size={10} />{weather.city}
+                    <div className="text-[12px] font-medium text-[var(--app-text)]">{currentWeather?.label}</div>
+                    <div className="flex items-center gap-1 text-[10px] text-[var(--app-text-muted)]">
+                      <MapPin size={9} />{weather.city}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[22px] font-bold text-[var(--app-text)] tabular-nums">{weather.currentMax}°</div>
-                  <div className="text-[11px] text-[var(--app-text-muted)]">{weather.currentMin}° / {weather.currentMax}°</div>
+                  <div className="text-[18px] font-semibold text-[var(--app-text)] tabular-nums">{weather.currentMax}°</div>
+                  <div className="text-[10px] text-[var(--app-text-muted)]">{weather.currentMin}° / {weather.currentMax}°</div>
                 </div>
               </div>
 

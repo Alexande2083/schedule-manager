@@ -133,7 +133,7 @@ export function MobileEditDrawer({ isOpen, onClose, task, tags, projects, contex
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="任务名称"
-            className="w-full text-sm bg-[var(--app-input-bg)] rounded-lg px-3 py-2.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[#d4857a]"
+            className="w-full text-sm bg-[var(--app-input-bg)] rounded-lg px-3 py-2.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)]"
           />
 
           {/* Date & Time */}
@@ -160,7 +160,7 @@ export function MobileEditDrawer({ isOpen, onClose, task, tags, projects, contex
               {[15, 30, 45, 60, 90, 120].map(d => (
                 <button key={d} onClick={() => setDuration(d)}
                   className={cn('flex-1 py-1.5 rounded-lg text-[10px] font-medium border transition-all',
-                    duration === d ? 'bg-[#d4857a] text-white border-[#d4857a]' : 'bg-[var(--app-surface-hover)] text-[var(--app-text-muted)] border-[var(--app-border)]')}>
+                    duration === d ? 'bg-[var(--app-accent)] text-white border-[var(--app-accent)]' : 'bg-[var(--app-surface-hover)] text-[var(--app-text-muted)] border-[var(--app-border)]')}>
                   {d >= 60 ? `${d / 60}h` : `${d}m`}
                 </button>
               ))}
@@ -248,7 +248,7 @@ export function MobileEditDrawer({ isOpen, onClose, task, tags, projects, contex
               保存
             </button>
             <button onClick={handleSaveAndComplete} disabled={!title.trim()}
-              className="px-4 py-2 rounded-lg text-xs font-medium bg-[#d4857a] text-white disabled:opacity-50">
+              className="px-4 py-2 rounded-lg text-xs font-medium bg-[var(--app-accent)] text-white disabled:opacity-50">
               保存并完成
             </button>
           </div>

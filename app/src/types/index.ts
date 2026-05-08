@@ -25,6 +25,8 @@ export interface Task {
   urgency: 'urgent' | 'normal';
   deadline?: string;
   repeat?: 'none' | 'daily' | 'weekly' | 'monthly';
+  /** 自定义重复规则 JSON 字符串，如 {"type":"workday","interval":1} */
+  repeatRule?: string;
   pinned: boolean;
   reminder?: string;
   completedAt?: number;
@@ -36,6 +38,8 @@ export interface Task {
   contexts?: string[];
   // 简易备注
   notes?: string;
+  // 任务依赖关系：依赖的任务 ID 列表
+  dependsOn?: string[];
 }
 
 // OmniFocus-inspired: Context (where/tool/person)
@@ -71,6 +75,23 @@ export interface Checklist {
   archived: boolean;
 }
 
+// Unified sync/export data format
+export interface SyncData {
+  tasks: Task[];
+  projects: Project[];
+  checklists: Checklist[];
+  contexts: Context[];
+  perspectives: Perspective[];
+  tags: Record<string, { label: string; color: string }>;
+}
+
+export interface AppDataExport extends SyncData {
+  version: number;
+  exportDate: string;
+  theme: { colorScheme: string; isDark: boolean } | 'light' | 'dark';
+  selectedDate: string;
+}
+
 export interface PomodoroState {
   minutes: number;
   seconds: number;
@@ -81,7 +102,7 @@ export interface PomodoroState {
 export type ViewType = 'today' | 'week' | 'completed' | 'checklist' | 'mindmap' | 'review' | 'perspectives';
 
 // Theme color scheme
-export type ThemeColor = 'coral' | 'ocean' | 'mint' | 'lavender' | 'amber' | 'glass' | 'pure-white' | 'pure-black';
+export type ThemeColor = 'coral' | 'ocean' | 'mint' | 'lavender' | 'amber' | 'rose' | 'sky' | 'sunset';
 export type DisplayMode = 'list' | 'gantt';
 
 // 柔和耐看配色 —— 所有颜色均为低饱和度、舒适的浅色系
@@ -163,44 +184,44 @@ export const DEFAULT_PERSPECTIVES: Perspective[] = [
   },
 ];
 
-// 四象限柔和配色
+// 四象限莫兰迪色系（低饱和度、高级感）
 export const QUADRANT_CONFIG = {
   'important-urgent': {
     label: '重要且紧急',
-    bgColor: 'bg-red-50',
-    bgColorDark: 'bg-red-900/20',
-    borderColor: 'border-red-100',
-    borderColorDark: 'border-red-800',
-    textColor: 'text-red-600',
-    textColorDark: 'text-red-300',
+    bgColor: 'bg-rose-50/60',
+    bgColorDark: 'bg-rose-950/30',
+    borderColor: 'border-rose-200/60',
+    borderColorDark: 'border-rose-900/40',
+    textColor: 'text-rose-600',
+    textColorDark: 'text-rose-300',
     accentColor: '#c98a8a',
   },
   'important-not-urgent': {
     label: '重要不紧急',
-    bgColor: 'bg-amber-50',
-    bgColorDark: 'bg-amber-900/20',
-    borderColor: 'border-amber-100',
-    borderColorDark: 'border-amber-800',
+    bgColor: 'bg-amber-50/50',
+    bgColorDark: 'bg-amber-950/25',
+    borderColor: 'border-amber-200/50',
+    borderColorDark: 'border-amber-900/35',
     textColor: 'text-amber-600',
     textColorDark: 'text-amber-300',
     accentColor: '#c9a66b',
   },
   'not-important-urgent': {
     label: '紧急不重要',
-    bgColor: 'bg-sky-50',
-    bgColorDark: 'bg-sky-900/20',
-    borderColor: 'border-sky-100',
-    borderColorDark: 'border-sky-800',
+    bgColor: 'bg-sky-50/50',
+    bgColorDark: 'bg-sky-950/25',
+    borderColor: 'border-sky-200/50',
+    borderColorDark: 'border-sky-900/35',
     textColor: 'text-sky-600',
     textColorDark: 'text-sky-300',
     accentColor: '#8bb4d6',
   },
   'not-important-not-urgent': {
     label: '不重要不紧急',
-    bgColor: 'bg-emerald-50',
-    bgColorDark: 'bg-emerald-900/20',
-    borderColor: 'border-emerald-100',
-    borderColorDark: 'border-emerald-800',
+    bgColor: 'bg-emerald-50/50',
+    bgColorDark: 'bg-emerald-950/25',
+    borderColor: 'border-emerald-200/50',
+    borderColorDark: 'border-emerald-900/35',
     textColor: 'text-emerald-600',
     textColorDark: 'text-emerald-300',
     accentColor: '#8cc4a8',

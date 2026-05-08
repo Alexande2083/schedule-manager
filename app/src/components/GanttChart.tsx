@@ -22,7 +22,7 @@ const START_HOUR = 6;
 const END_HOUR = 22;
 const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
 const TIME_AXIS_WIDTH = 52; // px
-const BODY_HEIGHT = 460; // px — fixed body height, no ResizeObserver
+const BODY_HEIGHT = 560; // px — more vertical space for task blocks
 
 const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
@@ -117,7 +117,7 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
 
   // Grid column definition: time axis + one column per project
   const gridColumns = useMemo(() => {
-    return `${TIME_AXIS_WIDTH}px repeat(${activeProjects.length}, minmax(120px, 1fr))`;
+    return `${TIME_AXIS_WIDTH}px repeat(${activeProjects.length}, minmax(180px, 1fr))`;
   }, [activeProjects.length]);
 
   // Group tasks by project, then by time overlap within each column
@@ -175,7 +175,7 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
   }
 
   return (
-    <div className="bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] shadow-sm overflow-hidden flex flex-col h-[500px]">
+    <div className="bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] shadow-sm overflow-hidden flex flex-col h-[600px]">
       {/* Single unified scrollable grid — header + body in one container */}
       <div className="flex-1 min-h-0 overflow-auto" onWheel={handleWheel}>
         <div
@@ -271,7 +271,7 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
                 {colTasks.map((task) => {
                   const topPx = minutesToPx(task.startMinutes);
                   const rawHeight = ((task.endMinutes - task.startMinutes) / TOTAL_MINUTES) * BODY_HEIGHT;
-                  const heightPx = Math.max(rawHeight, 28);
+                  const heightPx = Math.max(rawHeight, 36);
                   const colWidth = 100 / task.colTotal;
                   const leftPercent = task.colIndex * colWidth;
 
@@ -282,25 +282,68 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
                       className="absolute rounded-lg overflow-hidden transition-all duration-200 hover:brightness-110 hover:scale-[1.02] cursor-pointer shadow-sm text-left group"
                       style={{
                         top: `${topPx}px`,
-                        left: `${leftPercent + 1}%`,
-                        width: `${colWidth - 2}%`,
+                        left: `${leftPercent + 3}%`,
+                        width: `${colWidth - 6}%`,
                         height: `${heightPx}px`,
                         backgroundColor: p.color,
-                        minHeight: '28px',
+                        minHeight: '36px',
                       }}
                       title={`${task.title} (${task.time} - ${task.duration || 60}分钟)`}
                     >
-                      <div className="px-1.5 py-0.5 flex flex-col h-full justify-center min-h-0 overflow-hidden">
-                        <span className="text-[10px] font-semibold text-white truncate leading-tight">
+                      <div className="px-2 py-1 flex flex-col h-full justify-center min-h-0 overflow-hidden">
+                        <span className="text-[11px] font-semibold text-white truncate leading-tight">
                           {task.title}
                         </span>
-                        <span className="text-[8px] text-white/80 mt-0.5">
+                        <span className="text-[9px] text-white/80 mt-0.5">
                           {task.time}
                         </span>
                       </div>
                     </button>
                   );
                 })}
+
+                {/* Dependency arrows — SVG overlay */}
+                {(() => {
+                  const arrows: { from: GanttTask; to: GanttTask }[] = [];
+                  colTasks.forEach(toTask => {
+                    if (!toTask.dependsOn || toTask.dependsOn.length === 0) return;
+                    toTask.dependsOn.forEach(depId => {
+                      const fromTask = colTasks.find(t => t.id === depId);
+                      if (fromTask) {
+                        arrows.push({ from: fromTask, to: toTask });
+                      }
+                    });
+                  });
+                  if (arrows.length === 0) return null;
+                  return (
+                    <svg
+                      className="absolute inset-0 pointer-events-none z-10"
+                      style={{ width: '100%', height: BODY_HEIGHT }}
+                    >
+                      {arrows.map(({ from, to }, i) => {
+                        const fromTop = minutesToPx(from.startMinutes) + Math.max(((from.endMinutes - from.startMinutes) / TOTAL_MINUTES) * BODY_HEIGHT, 28) / 2;
+                        const toTop = minutesToPx(to.startMinutes);
+                        const fromColWidth = 100 / from.colTotal;
+                        const toColWidth = 100 / to.colTotal;
+                        const fromLeft = (from.colIndex * fromColWidth + fromColWidth / 2) + '%';
+                        const toLeft = (to.colIndex * toColWidth + toColWidth / 2) + '%';
+                        return (
+                          <line
+                            key={`dep-${i}`}
+                            x1={fromLeft}
+                            y1={fromTop}
+                            x2={toLeft}
+                            y2={toTop}
+                            stroke="var(--app-accent)"
+                            strokeWidth={1.5}
+                            strokeDasharray="4 2"
+                            opacity={0.6}
+                          />
+                        );
+                      })}
+                    </svg>
+                  );
+                })()}
               </div>
             );
           })}

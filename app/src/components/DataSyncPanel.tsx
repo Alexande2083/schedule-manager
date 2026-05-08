@@ -2,25 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Download, Upload, RotateCcw, AlertTriangle, X, Check, FileJson, Link2,
   Copy, CheckCheck, Zap, Loader2, ClipboardCopy, ClipboardPaste,
-  CalendarPlus, FileText
+  CalendarPlus, FileText, Key, Cloud, RefreshCw
 } from 'lucide-react';
 import { exportTasksToICS, generateWeeklyMarkdown, copyToClipboard } from '@/utils/export';
 import LZString from 'lz-string';
 import { cn } from '@/lib/utils';
-import type { Task, Project } from '@/types';
-
-interface AppDataExport {
-  version: number;
-  exportDate: string;
-  tasks: Task[];
-  tags: Record<string, { label: string; color: string }>;
-  projects: Project[];
-  checklists?: { id: string; name: string; defaultTag: string; order: number; archived: boolean }[];
-  contexts?: { id: string; label: string; icon: string; color: string }[];
-  perspectives?: { id: string; name: string; icon: string; filters: Record<string, unknown> }[];
-  theme: { colorScheme: string; isDark: boolean } | 'light' | 'dark';
-  selectedDate: string;
-}
+import type { AppDataExport } from '@/types';
 
 interface DataSyncPanelProps {
   isOpen: boolean;
@@ -29,13 +16,23 @@ interface DataSyncPanelProps {
   onImport: (data: AppDataExport) => void;
 }
 
-type SyncTab = 'url' | 'clipboard' | 'json';
+type SyncTab = 'url' | 'clipboard' | 'json' | 'cloud';
 
 export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSyncPanelProps) {
   const [activeTab, setActiveTab] = useState<SyncTab>('clipboard');
+
+  // Cloud sync state
+  const [syncKeyInput, setSyncKeyInput] = useState('');
+  const [syncStatus, setSyncStatus] = useState<{ type: 'idle' | 'syncing' | 'success' | 'error'; message: string } | null>(null);
+
+  // WebDAV (坚果云) state
+  const [davUrl, setDavUrl] = useState('');
+  const [davUser, setDavUser] = useState('');
+  const [davPass, setDavPass] = useState('');
+  const [davStatus, setDavStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   const [syncUrl, setSyncUrl] = useState('');
   const [urlCopied, setUrlCopied] = useState(false);
-  const [importStatus, setImportStatus] = useState<{ success: boolean; message: string } | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,7 +58,7 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
       setSyncUrl(url);
       setUrlCopied(false);
     } catch {
-      setImportStatus({ success: false, message: '生成链接失败' });
+      setSyncStatus({ type: 'error', message: '生成链接失败' });
     }
     setLoading(false);
   };
@@ -74,7 +71,7 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
       setTimeout(() => setUrlCopied(false), 2000);
     } catch {
       urlInputRef.current?.select();
-      setImportStatus({ success: false, message: '请手动复制链接' });
+      setSyncStatus({ type: 'error', message: '请手动复制链接' });
     }
   };
 
@@ -86,10 +83,10 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
       await navigator.clipboard.writeText(compressed);
       setClipboardCopied(true);
       setClipboardData(compressed.slice(0, 80) + '...');
-      setImportStatus({ success: true, message: '数据已复制到剪贴板！可粘贴到微信、邮件、备忘录等' });
+      setSyncStatus({ type: 'success', message: '数据已复制到剪贴板！可粘贴到微信、邮件、备忘录等' });
       setTimeout(() => setClipboardCopied(false), 2000);
     } catch {
-      setImportStatus({ success: false, message: '剪贴板写入失败，请手动复制' });
+      setSyncStatus({ type: 'error', message: '剪贴板写入失败，请手动复制' });
     }
   };
 
@@ -97,12 +94,12 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
     try {
       const text = await navigator.clipboard.readText();
       if (!text.trim()) {
-        setImportStatus({ success: false, message: '剪贴板为空' });
+        setSyncStatus({ type: 'error', message: '剪贴板为空' });
         return;
       }
       handleClipboardImport(text.trim());
     } catch {
-      setImportStatus({ success: false, message: '无法读取剪贴板，请手动粘贴到下方输入框' });
+      setSyncStatus({ type: 'error', message: '无法读取剪贴板，请手动粘贴到下方输入框' });
     }
   };
 
@@ -118,12 +115,12 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
       const data = JSON.parse(json) as AppDataExport;
       if (!data.tasks || !Array.isArray(data.tasks)) throw new Error('无效的数据格式');
       onImport(data);
-      setImportStatus({ success: true, message: '剪贴板导入成功！数据已恢复' });
+      setSyncStatus({ type: 'success', message: '剪贴板导入成功！数据已恢复' });
       setClipboardImportText('');
-      setTimeout(() => { setImportStatus(null); onClose(); }, 1500);
+      setTimeout(() => { setSyncStatus(null); onClose(); }, 1500);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      setImportStatus({ success: false, message: '导入失败：' + msg });
+      setSyncStatus({ type: 'error', message: '导入失败：' + msg });
     }
   };
 
@@ -138,8 +135,8 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setImportStatus({ success: true, message: 'JSON 导出成功' });
-    setTimeout(() => setImportStatus(null), 2000);
+    setSyncStatus({ type: 'success', message: 'JSON 导出成功' });
+    setTimeout(() => setSyncStatus(null), 2000);
   };
 
   // JSON Import
@@ -153,10 +150,10 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
         const data = JSON.parse(content) as AppDataExport;
         if (!data.tasks || !Array.isArray(data.tasks)) throw new Error('无效的数据格式');
         onImport(data);
-        setImportStatus({ success: true, message: '导入成功！数据已恢复' });
-        setTimeout(() => { setImportStatus(null); onClose(); }, 1500);
+        setSyncStatus({ type: 'success', message: '导入成功！数据已恢复' });
+        setTimeout(() => { setSyncStatus(null); onClose(); }, 1500);
       } catch {
-        setImportStatus({ success: false, message: '文件解析失败，请检查格式' });
+        setSyncStatus({ type: 'error', message: '文件解析失败，请检查格式' });
       }
     };
     reader.readAsText(file);
@@ -197,6 +194,10 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
           <button onClick={() => setActiveTab('json')} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all', activeTab === 'json' ? 'bg-[var(--app-accent)]/10 text-[var(--app-accent)]' : 'text-[var(--app-text-muted)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)]')}>
             <FileJson size={13} />
             文件备份
+          </button>
+          <button onClick={() => setActiveTab('cloud')} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all', activeTab === 'cloud' ? 'bg-[var(--app-accent)]/10 text-[var(--app-accent)]' : 'text-[var(--app-text-muted)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)]')}>
+            <Zap size={13} />
+            云端同步
           </button>
         </div>
 
@@ -336,8 +337,8 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
                     onClick={async () => {
                       const md = generateWeeklyMarkdown(currentData.tasks, currentData.projects);
                       await copyToClipboard(md);
-                      setImportStatus({ success: true, message: '周报已复制到剪贴板' });
-                      setTimeout(() => setImportStatus(null), 2000);
+                      setSyncStatus({ type: 'success', message: '周报已复制到剪贴板' });
+                      setTimeout(() => setSyncStatus(null), 2000);
                     }}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[var(--app-surface)] text-[var(--app-text)] border border-[var(--app-border)] hover:bg-[var(--app-surface-hover)] transition-colors"
                   >
@@ -392,14 +393,396 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
             </>
           )}
 
-          {/* Status message */}
-          {importStatus && (
-            <div className={cn('flex items-center gap-2 p-2.5 rounded-lg text-xs font-medium', importStatus.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200')}>
-              {importStatus.success ? <Check size={14} /> : <AlertTriangle size={14} />}
-              {importStatus.message}
-            </div>
+          {/* ===== CLOUD SYNC ===== */}
+          {activeTab === 'cloud' && (
+            <>
+              <div className="p-4 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-hover)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <Cloud size={14} className="text-[var(--app-accent)]" />
+                  <span className="text-sm font-medium text-[var(--app-text)]">云端同步密钥</span>
+                </div>
+                <p className="text-[11px] text-[var(--app-text-muted)] mb-3 leading-relaxed">
+                  设置一个同步密钥（任意字符串），在 Render 环境变量中设置为 <code className="bg-[var(--app-border)] px-1 rounded text-[10px]">SYNC_SECRET</code>，并在每台设备上输入相同密钥即可实现云同步。
+                </p>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={syncKeyInput}
+                    onChange={e => setSyncKeyInput(e.target.value)}
+                    placeholder="输入同步密钥..."
+                    className="flex-1 text-xs bg-[var(--app-input-bg)] rounded-lg px-3 py-2 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)]"
+                  />
+                  <button
+                    onClick={() => {
+                      if (!syncKeyInput.trim()) return;
+                      localStorage.setItem('cloud_sync_key', syncKeyInput.trim());
+                      setSyncKeyInput('');
+                      setSyncStatus({ type: 'success', message: '同步密钥已保存' });
+                      setTimeout(() => setSyncStatus(null), 2000);
+                    }}
+                    className="px-3 py-2 rounded-lg text-xs font-medium bg-[var(--app-accent)] text-white hover:brightness-110 transition-all"
+                  >保存</button>
+                  <button
+                    onClick={() => {
+                      const key = crypto.getRandomValues(new Uint32Array(4)).join('');
+                      setSyncKeyInput(key);
+                    }}
+                    className="px-3 py-2 rounded-lg text-xs font-medium bg-[var(--app-surface)] text-[var(--app-text)] border border-[var(--app-border)] hover:bg-[var(--app-surface-hover)] transition-all"
+                    title="生成随机密钥"
+                  ><Key size={12} /></button>
+                </div>
+                {localStorage.getItem('cloud_sync_key') && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="flex-1 text-[10px] text-[var(--app-text-muted)] font-mono truncate">
+                      当前密钥：{localStorage.getItem('cloud_sync_key')}
+                    </div>
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem('cloud_sync_key');
+                        setSyncStatus({ type: 'success', message: '同步密钥已清除' });
+                        setTimeout(() => setSyncStatus(null), 2000);
+                      }}
+                      className="text-[10px] text-red-500 hover:text-red-700 transition-colors"
+                    >清除密钥</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-hover)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <RefreshCw size={14} className="text-[var(--app-accent)]" />
+                  <span className="text-sm font-medium text-[var(--app-text)]">手动同步</span>
+                </div>
+                <p className="text-[11px] text-[var(--app-text-muted)] mb-3">将本地数据推送到服务器，刷新后自动拉取最新数据</p>
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={async () => {
+                      const key = localStorage.getItem('cloud_sync_key');
+                      if (!key) {
+                        setSyncStatus({ type: 'error', message: '请先设置同步密钥' });
+                        setTimeout(() => setSyncStatus(null), 3000);
+                        return;
+                      }
+                      setSyncStatus({ type: 'syncing', message: '正在同步...' });
+                      try {
+                        const { syncPut } = await import('@/utils/api');
+                        await syncPut({
+                          tasks: currentData.tasks,
+                          projects: currentData.projects,
+                          checklists: currentData.checklists || [],
+                          tags: Object.entries(currentData.tags || {}).map(([k, v]) => ({ id: `tag_${k}`, label: v.label, color: v.color })),
+                          contexts: currentData.contexts || [],
+                          perspectives: currentData.perspectives || [],
+                        });
+                        setSyncStatus({ type: 'success', message: '已推送至服务器，即将刷新拉取最新数据...' });
+                        setTimeout(() => { window.location.reload(); }, 1000);
+                      } catch (err) {
+                        setSyncStatus({ type: 'error', message: '同步失败：' + (err instanceof Error ? err.message : String(err)) });
+                        setTimeout(() => setSyncStatus(null), 3000);
+                      }
+                    }}
+                    disabled={syncStatus?.type === 'syncing'}
+                    className={cn(
+                      'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
+                      syncStatus?.type === 'syncing'
+                        ? 'bg-[var(--app-border)] text-[var(--app-text-muted)]'
+                        : 'bg-[var(--app-accent)] text-white hover:brightness-110 shadow-sm'
+                    )}
+                  >
+                    {syncStatus?.type === 'syncing' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    {syncStatus?.type === 'syncing' ? '同步中...' : '立即同步'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-hover)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <Cloud size={14} className="text-[#8cc68a]" />
+                  <span className="text-sm font-medium text-[var(--app-text)]">坚果云 WebDAV 同步</span>
+                </div>
+                <p className="text-[11px] text-[var(--app-text-muted)] mb-3 leading-relaxed">
+                  通过坚果云 WebDAV 实现跨设备同步。数据存储在你自己的坚果云账号中，无需依赖 Render 服务器。
+                </p>
+                <div className="space-y-2 mb-3">
+                  <input
+                    type="text"
+                    value={davUrl}
+                    onChange={e => setDavUrl(e.target.value)}
+                    placeholder="WebDAV 地址，如 https://dav.jianguoyun.com/dav/"
+                    className="w-full text-xs bg-[var(--app-input-bg)] rounded-lg px-3 py-2 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)]"
+                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={davUser}
+                      onChange={e => setDavUser(e.target.value)}
+                      placeholder="坚果云邮箱"
+                      className="flex-1 text-xs bg-[var(--app-input-bg)] rounded-lg px-3 py-2 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)]"
+                    />
+                    <input
+                      type="password"
+                      value={davPass}
+                      onChange={e => setDavPass(e.target.value)}
+                      placeholder="应用密码（非登录密码）"
+                      className="flex-1 text-xs bg-[var(--app-input-bg)] rounded-lg px-3 py-2 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)]"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={async () => {
+                      if (!davUrl || !davUser || !davPass) {
+                        setDavStatus({ type: 'error', message: '请填写完整的 WebDAV 配置' });
+                        return;
+                      }
+                      setDavStatus({ type: 'success', message: '正在测试连接...' });
+                      try {
+                        const res = await fetch('/api/webdav/test', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ url: davUrl, username: davUser, password: davPass }),
+                        });
+                        const data = await res.json();
+                        if (data.ok) {
+                          setDavStatus({ type: 'success', message: '连接成功！' });
+                          localStorage.setItem('sunsama-webdav', JSON.stringify({ url: davUrl, username: davUser, password: davPass }));
+                        } else {
+                          setDavStatus({ type: 'error', message: data.message });
+                        }
+                      } catch (err) {
+                        setDavStatus({ type: 'error', message: '测试失败：' + (err instanceof Error ? err.message : String(err)) });
+                      }
+                    }}
+                    className="px-3 py-2 rounded-lg text-xs font-medium bg-[var(--app-surface)] text-[var(--app-text)] border border-[var(--app-border)] hover:bg-[var(--app-surface-hover)] transition-all"
+                  >测试连接</button>
+                  <button
+                    onClick={async () => {
+                      if (!davUrl || !davUser || !davPass) {
+                        setDavStatus({ type: 'error', message: '请填写完整的 WebDAV 配置' });
+                        return;
+                      }
+                      setDavStatus({ type: 'success', message: '正在从坚果云拉取...' });
+                      try {
+                        const res = await fetch('/api/webdav/pull', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ url: davUrl, username: davUser, password: davPass }),
+                        });
+                        const data = await res.json();
+                        if (data.error) {
+                          setDavStatus({ type: 'error', message: data.error });
+                          return;
+                        }
+                        if (!data.exists) {
+                          setDavStatus({ type: 'error', message: '坚果云上暂无备份文件' });
+                          return;
+                        }
+                        if (window.confirm('检测到坚果云备份，是否恢复？当前数据将被覆盖。')) {
+                          onImport(data.data);
+                          setDavStatus({ type: 'success', message: '数据已从坚果云恢复' });
+                        }
+                      } catch (err) {
+                        setDavStatus({ type: 'error', message: '拉取失败：' + (err instanceof Error ? err.message : String(err)) });
+                      }
+                    }}
+                    className="px-3 py-2 rounded-lg text-xs font-medium bg-[var(--app-surface)] text-[var(--app-text)] border border-[var(--app-border)] hover:bg-[var(--app-surface-hover)] transition-all"
+                  >拉取数据</button>
+                  <button
+                    onClick={async () => {
+                      if (!davUrl || !davUser || !davPass) {
+                        setDavStatus({ type: 'error', message: '请填写完整的 WebDAV 配置' });
+                        return;
+                      }
+                      setDavStatus({ type: 'success', message: '正在推送到坚果云...' });
+                      try {
+                        const payload = {
+                          version: 2,
+                          exportDate: new Date().toISOString(),
+                          tasks: currentData.tasks,
+                          tags: currentData.tags,
+                          projects: currentData.projects,
+                          checklists: currentData.checklists || [],
+                          contexts: currentData.contexts || [],
+                          perspectives: currentData.perspectives || [],
+                          theme: currentData.theme,
+                          selectedDate: currentData.selectedDate,
+                        };
+                        const res = await fetch('/api/webdav/push', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ url: davUrl, username: davUser, password: davPass, content: JSON.stringify(payload) }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          setDavStatus({ type: 'success', message: '已推送至坚果云' });
+                        } else {
+                          setDavStatus({ type: 'error', message: data.error || '推送失败' });
+                        }
+                      } catch (err) {
+                        setDavStatus({ type: 'error', message: '推送失败：' + (err instanceof Error ? err.message : String(err)) });
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-[var(--app-accent)] text-white hover:brightness-110 transition-all"
+                  >推送数据</button>
+                </div>
+                {davStatus && (
+                  <div className={cn(
+                    'flex items-center gap-2 p-2 rounded-lg text-xs font-medium',
+                    davStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                  )}>
+                    {davStatus.type === 'success' ? <Check size={12} /> : <AlertTriangle size={12} />}
+                    {davStatus.message}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                <p className="text-[10px] text-blue-700 leading-relaxed">
+                  <span className="font-semibold">使用步骤：</span><br />
+                  1. 在 Render 环境变量中设置 <code className="bg-blue-100 px-1 rounded">SYNC_SECRET</code><br />
+                  2. 在下方输入相同密钥并保存<br />
+                  3. 点击「立即同步」完成首次同步<br />
+                  4. 其他设备重复步骤 2-3 即可
+                </p>
+              </div>
+
+              {syncStatus && syncStatus.type !== 'syncing' && (
+                <div className={cn(
+                  'flex items-center gap-2 p-2.5 rounded-lg text-xs font-medium',
+                  syncStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                )}>
+                  {syncStatus.type === 'success' ? <Check size={14} /> : <AlertTriangle size={14} />}
+                  {syncStatus.message}
+                </div>
+              )}
+            </>
           )}
         </div>
+
+        {/* Auto-backup section */}
+        <AutoBackupSection currentData={currentData} />
+      </div>
+    </div>
+  );
+}
+
+function AutoBackupSection({ currentData }: { currentData: AppDataExport }) {
+  const [autoBackup, setAutoBackup] = useState(() => localStorage.getItem('sunsama-autobackup') === 'true');
+  const [backupInterval, setBackupInterval] = useState(() => parseInt(localStorage.getItem('sunsama-autobackup-interval') || '30'));
+  const [lastBackup, setLastBackup] = useState(() => localStorage.getItem('sunsama-autobackup-time') || '从未备份');
+  const [backupStatus, setBackupStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('sunsama-autobackup', String(autoBackup));
+  }, [autoBackup]);
+
+  useEffect(() => {
+    localStorage.setItem('sunsama-autobackup-interval', String(backupInterval));
+  }, [backupInterval]);
+
+  useEffect(() => {
+    if (!autoBackup) return;
+    const interval = setInterval(() => {
+      try {
+        const backupKey = 'sunsama-autobackup-data';
+        localStorage.setItem(backupKey, JSON.stringify(currentData));
+        const now = new Date().toLocaleString('zh-CN');
+        localStorage.setItem('sunsama-autobackup-time', now);
+        setLastBackup(now);
+      } catch { /* quota exceeded - just skip */ }
+    }, backupInterval * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [autoBackup, backupInterval, currentData]);
+
+  const manualBackup = () => {
+    try {
+      const backupKey = 'sunsama-autobackup-data';
+      localStorage.setItem(backupKey, JSON.stringify(currentData));
+      const now = new Date().toLocaleString('zh-CN');
+      localStorage.setItem('sunsama-autobackup-time', now);
+      setLastBackup(now);
+      setBackupStatus('已备份');
+      setTimeout(() => setBackupStatus(null), 2000);
+    } catch {
+      setBackupStatus('备份失败，存储空间不足');
+      setTimeout(() => setBackupStatus(null), 3000);
+    }
+  };
+
+  const downloadBackup = () => {
+    const data = localStorage.getItem('sunsama-autobackup-data');
+    if (!data) {
+      setBackupStatus('无备份数据');
+      setTimeout(() => setBackupStatus(null), 2000);
+      return;
+    }
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="px-6 pb-5 pt-2 border-t border-[var(--app-border)]">
+      <div className="p-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-hover)]">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <RefreshCw size={14} className="text-[var(--app-accent)]" />
+            <span className="text-xs font-medium text-[var(--app-text)]">自动备份</span>
+          </div>
+          <button
+            onClick={() => setAutoBackup(!autoBackup)}
+            className={cn(
+              'w-8 h-4 rounded-full transition-all relative',
+              autoBackup ? 'bg-[var(--app-accent)]' : 'bg-[var(--app-border)]'
+            )}
+          >
+            <span className={cn(
+              'absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all',
+              autoBackup ? 'left-[18px]' : 'left-0.5'
+            )} />
+          </button>
+        </div>
+        {autoBackup && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-[var(--app-text-muted)]">每</span>
+              <select
+                value={backupInterval}
+                onChange={(e) => setBackupInterval(Number(e.target.value))}
+                className="text-[10px] bg-[var(--app-input-bg)] rounded px-2 py-1 border border-[var(--app-border)] text-[var(--app-text)] outline-none"
+              >
+                <option value={5}>5分钟</option>
+                <option value={15}>15分钟</option>
+                <option value={30}>30分钟</option>
+                <option value={60}>1小时</option>
+              </select>
+              <span className="text-[10px] text-[var(--app-text-muted)]">自动备份到浏览器</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-[var(--app-text-muted)]">上次备份：{lastBackup}</span>
+              <button
+                onClick={manualBackup}
+                className="px-2 py-1 rounded text-[10px] font-medium bg-[var(--app-accent)] text-white hover:brightness-110 transition-all"
+              >
+                立即备份
+              </button>
+              <button
+                onClick={downloadBackup}
+                className="px-2 py-1 rounded text-[10px] font-medium text-[var(--app-text-secondary)] border border-[var(--app-border)] hover:bg-[var(--app-surface)] transition-all"
+              >
+                下载备份
+              </button>
+            </div>
+            {backupStatus && (
+              <p className="text-[10px] text-green-600">{backupStatus}</p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

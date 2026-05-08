@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import type { Task, ViewType, Project, Context } from '@/types';
+import type { Task, Project, Context } from '@/types';
 import { cn } from '@/lib/utils';
 import { CalendarPanel } from './CalendarPanel';
 import { QuadrantPanel } from './QuadrantPanel';
@@ -17,7 +17,7 @@ interface MobileDrawerProps {
   onUpdateQuadrant: (id: string, importance: 'important' | 'normal', urgency: 'urgent' | 'normal') => void;
   onSelectDate: (date: string) => void;
   // Sidebar props
-  onChangeView?: (view: ViewType) => void;
+  onChangeView?: (view: string) => void;
   filterTag?: string | null;
   onFilterTag?: (tag: string | null) => void;
   filterContext?: string[];
@@ -33,16 +33,18 @@ interface MobileDrawerProps {
   projects?: Project[];
   onUpdateProjects?: (projects: Project[]) => void;
   contexts?: Context[];
+  onUpdateContexts?: (contexts: Context[]) => void;
   onOpenSync?: () => void;
   onOpenAI?: () => void;
   onOpenThemeSettings?: () => void;
+  onOpenNotificationSettings?: () => void;
 }
 
 export function MobileDrawer({
   isOpen, onClose, type, tasks, selectedDate, view, onToggleTask, onUpdateQuadrant, onSelectDate,
-  onChangeView, filterTag, onFilterTag, filterContext, onFilterContext, filterProject, onFilterProject,
-  completedToday, onOpenPomodoro,
-  isDark, onToggleTheme, tags, onUpdateTags, projects, onUpdateProjects, contexts, onOpenSync, onOpenAI, onOpenThemeSettings,
+  onChangeView, filterTag, onFilterTag, filterProject, onFilterProject,
+  filterContext, onFilterContext, tags, projects, contexts,
+  onUpdateProjects, onUpdateTags, onUpdateContexts,
 }: MobileDrawerProps) {
   const isSidebar = type === 'sidebar';
 
@@ -112,30 +114,15 @@ export function MobileDrawer({
           {type === 'countdown' && (
             <CountdownPanel tasks={tasks} onToggleTask={onToggleTask} onOpenEdit={() => {}} />
           )}
-          {type === 'sidebar' && onChangeView && tags && onFilterTag && projects && onUpdateTags && onUpdateProjects && (
+          {type === 'sidebar' && onChangeView && (
             <div className="lg:hidden">
               <Sidebar
-                view={(view as ViewType) || 'today'}
+                view={(view as string) || 'today'}
                 onChangeView={(v) => { onChangeView(v); }}
-                filterTag={filterTag || null}
-                onFilterTag={onFilterTag}
-                filterProject={filterProject || null}
-                onFilterProject={onFilterProject || (() => {})}
-                filterContext={filterContext || []}
-                onFilterContext={onFilterContext || (() => {})}
-                tasks={tasks}
-                completedToday={completedToday || 0}
-                onOpenPomodoro={() => { if (onOpenPomodoro) { onOpenPomodoro(); onClose(); } }}
-                isDark={!!isDark}
-                onToggleTheme={onToggleTheme || (() => {})}
-                tags={tags}
-                onUpdateTags={onUpdateTags}
-                projects={projects}
-                onUpdateProjects={onUpdateProjects}
-                contexts={contexts || []}
-                onOpenSync={() => { if (onOpenSync) { onOpenSync(); onClose(); } }}
-                onOpenAI={() => { if (onOpenAI) { onOpenAI(); onClose(); } }}
-                onOpenThemeSettings={() => { if (onOpenThemeSettings) { onOpenThemeSettings(); onClose(); } }}
+                tags={tags} filterTag={filterTag} onFilterTag={onFilterTag}
+                projects={projects} filterProject={filterProject} onFilterProject={onFilterProject}
+                contexts={contexts} filterContext={filterContext} onFilterContext={onFilterContext}
+                onUpdateProjects={onUpdateProjects} onUpdateTags={onUpdateTags} onUpdateContexts={onUpdateContexts}
               />
             </div>
           )}

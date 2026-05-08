@@ -1,45 +1,48 @@
-import { Calendar, CheckCircle2, Timer, ListChecks, TreePine, View } from 'lucide-react';
-import type { ViewType } from '@/types';
+import { Calendar, Timer, Brain, CalendarDays, Zap, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MobileBottomNavProps {
-  view: ViewType;
-  onChangeView: (v: ViewType) => void;
+  view: string;
+  onChangeView: (v: string) => void;
   onOpenPomodoro: () => void;
 }
 
 export function MobileBottomNav({ view, onChangeView, onOpenPomodoro }: MobileBottomNavProps) {
   const items = [
-    { id: 'today' as ViewType, label: '今日', icon: Calendar },
-    { id: 'checklist' as ViewType, label: '清单', icon: ListChecks },
-    { id: 'mindmap' as ViewType, label: '导图', icon: TreePine },
-    { id: 'perspectives' as ViewType, label: '透视', icon: View },
-    { id: 'completed' as ViewType, label: '已完成', icon: CheckCircle2 },
+    { id: 'today', label: '今日', icon: Calendar },
+    { id: 'insights', label: '洞察', icon: Brain },
+    { id: 'weeklyplan', label: '周计划', icon: CalendarDays },
+    { id: 'scheduler', label: '排程', icon: Zap },
+    { id: 'habits', label: '习惯', icon: Flame },
   ];
 
   return (
-    <div className="lg:hidden glass-toolbar flex items-center justify-around bg-[var(--app-surface)] rounded-2xl border border-[var(--app-border)] py-2 px-3 mx-1 mb-1">
-      {items.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => onChangeView(item.id)}
-          className={cn(
-            'flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all',
-            view === item.id
-              ? 'text-[var(--app-accent)]'
-              : 'text-[var(--app-text-muted)]'
-          )}
-        >
-          <item.icon size={18} />
-          <span className="text-[10px] font-medium">{item.label}</span>
-        </button>
-      ))}
+    <div className="glass-toolbar flex items-center justify-around bg-[var(--app-surface)] rounded-2xl border border-[var(--app-border)] py-1.5 px-2 mx-1 mb-1">
+      {items.map((item) => {
+        const Icon = item.icon;
+        const isActive = view === item.id;
+        return (
+          <button
+            key={item.id}
+            onClick={() => onChangeView(item.id)}
+            className={cn(
+              'flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all min-w-0',
+              isActive
+                ? 'text-[var(--app-accent)]'
+                : 'text-[var(--app-text-muted)]'
+            )}
+          >
+            <Icon size={17} />
+            <span className="text-[9px] font-medium truncate max-w-full">{item.label}</span>
+          </button>
+        );
+      })}
       <button
         onClick={onOpenPomodoro}
-        className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-[var(--app-text-muted)]"
+        className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl text-[var(--app-text-muted)]"
       >
-        <Timer size={18} />
-        <span className="text-[10px] font-medium">番茄钟</span>
+        <Timer size={17} />
+        <span className="text-[9px] font-medium">番茄钟</span>
       </button>
     </div>
   );

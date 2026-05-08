@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { getToday } from '@/utils/date';
 
 interface PomodoroTimer {
@@ -94,7 +94,7 @@ export function usePomodoro() {
     ? ((state.duration - state.minutes - state.seconds / 60) / state.duration) * 100
     : 0;
 
-  return {
+  return useMemo(() => ({
     minutes: state.minutes,
     seconds: state.seconds,
     isRunning: state.isRunning,
@@ -105,5 +105,5 @@ export function usePomodoro() {
     reset,
     setDuration,
     progress,
-  };
+  }), [state.minutes, state.seconds, state.isRunning, state.completedToday, state.duration, start, pause, reset, setDuration, progress]);
 }

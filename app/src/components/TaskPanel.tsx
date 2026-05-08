@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { parseISO, startOfWeek, endOfWeek, isWithinInterval, format } from 'date-fns';
 import { CalendarDays, ChevronLeft, ChevronRight, Flame, List, BarChart3 } from 'lucide-react';
-import type { Task, ViewType, DisplayMode, Context } from '@/types';
+import type { Task, DisplayMode, Context } from '@/types';
 import type { Project } from '@/types';
 import type { TaskTemplate } from '@/hooks/useTaskTemplates';
 import { formatDisplayDate, isToday as checkIsToday } from '@/utils/date';
@@ -10,19 +10,28 @@ import { TaskItem } from './TaskItem';
 import { AddTaskInput } from './AddTaskInput';
 import { GanttChart } from './GanttChart';
 import { TaskEditModal } from './TaskEditModal';
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 
 import { HeatmapPanel } from './HeatmapPanel';
 import { CompletionStatsPanel } from './CompletionStatsPanel';
 import { TaskTrendChart } from './TaskTrendChart';
 import { CompletedTasksList } from './CompletedTasksList';
+import { WeatherTimeWidget } from './WeatherTimeWidget';
 
 interface TaskPanelProps {
   tasks: Task[];
   selectedDate: string;
-  view: ViewType;
+  view: string;
   displayMode: DisplayMode;
   onChangeDisplayMode: (mode: DisplayMode) => void;
   filterTag: string | null;
+  onFilterTag?: (tag: string | null) => void;
   filterProject?: string | null;
   onSelectDate: (date: string) => void;
   onToggleTask: (id: string) => void;
@@ -51,6 +60,7 @@ export function TaskPanel({
   onChangeDisplayMode,
   filterTag,
   filterProject,
+  onFilterTag,
   onSelectDate,
   onToggleTask,
   onDeleteTask,
@@ -69,9 +79,11 @@ export function TaskPanel({
   templates,
   onReorderProjects,
 }: TaskPanelProps) {
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
   const [collapsedTasks, setCollapsedTasks] = useState<Set<string>>(new Set());
 
   // Filter tasks by view/tag/project
@@ -140,46 +152,17 @@ export function TaskPanel({
     onSelectDate(format(d, 'yyyy-MM-dd'));
   };
 
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    setDraggedId(id);
-    e.dataTransfer.effectAllowed = 'move';
-    const el = e.currentTarget as HTMLElement;
-    if (el) {
-      e.dataTransfer.setDragImage(el, 0, 0);
-    }
-  };
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-  const handleDragOver = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (!draggedId || draggedId === targetId) return;
-    setDragOverId(targetId);
-  };
-
-  const handleDragLeave = () => {
-    setDragOverId(null);
-  };
-
-  const handleDrop = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    if (!draggedId || draggedId === targetId) {
-      setDraggedId(null);
-      setDragOverId(null);
-      return;
-    }
-
-    const draggedIndex = allFilteredTasks.findIndex(t => t.id === draggedId);
-    const targetIndex = allFilteredTasks.findIndex(t => t.id === targetId);
-
-    if (draggedIndex === -1 || targetIndex === -1) {
-      setDraggedId(null);
-      setDragOverId(null);
-      return;
-    }
+    const oldIndex = allFilteredTasks.findIndex(t => t.id === active.id);
+    const newIndex = allFilteredTasks.findIndex(t => t.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
 
     const newFiltered = [...allFilteredTasks];
-    const [removed] = newFiltered.splice(draggedIndex, 1);
-    newFiltered.splice(targetIndex, 0, removed);
+    const [removed] = newFiltered.splice(oldIndex, 1);
+    newFiltered.splice(newIndex, 0, removed);
 
     const minOrder = Math.min(...newFiltered.map(t => t.order));
     const reorderedWithNewOrders = newFiltered.map((t, idx) => ({
@@ -193,14 +176,7 @@ export function TaskPanel({
     });
 
     onReorderTasks(fullTasks);
-    setDraggedId(null);
-    setDragOverId(null);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedId(null);
-    setDragOverId(null);
-  };
+  }, [allFilteredTasks, tasks, onReorderTasks]);
 
   const getTitle = () => {
     if (view === 'today') {
@@ -256,8 +232,8 @@ export function TaskPanel({
                 onClick={() => onChangeDisplayMode('list')}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                  displayMode === 'list'
-                    ? 'bg-[#d4857a] text-white'
+                    displayMode === 'list'
+                    ? 'bg-[var(--app-accent)] text-white'
                     : 'text-[var(--app-text-secondary)] hover:text-[var(--app-text)]'
                 )}
               >
@@ -269,7 +245,7 @@ export function TaskPanel({
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
                   displayMode === 'gantt'
-                    ? 'bg-[#d4857a] text-white'
+                    ? 'bg-[var(--app-accent)] text-white'
                     : 'text-[var(--app-text-secondary)] hover:text-[var(--app-text)]'
                 )}
               >
@@ -280,11 +256,43 @@ export function TaskPanel({
           )}
 
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--app-surface)] rounded-lg border border-[var(--app-border)] text-xs text-[var(--app-text-secondary)]">
-            <Flame size={14} className="text-[#d4857a]" />
+            <Flame size={14} className="text-[var(--app-accent)]" />
             <span>今日 {completedToday} 个番茄</span>
           </div>
         </div>
       </div>
+
+      {/* Tag filter bar */}
+      {view !== 'completed' && Object.keys(tags).length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          {Object.entries(tags).map(([key, tag]) => {
+            const isActive = filterTag === key;
+            return (
+              <button
+                key={key}
+                onClick={() => onFilterTag?.(isActive ? null : key)}
+                className={cn(
+                  'px-2.5 py-1 rounded-full text-[11px] font-medium transition-all border',
+                  isActive
+                    ? 'text-white border-transparent'
+                    : 'text-[var(--app-text-secondary)] border-[var(--app-border)] hover:border-[var(--app-accent)] hover:text-[var(--app-accent)]'
+                )}
+                style={isActive ? { backgroundColor: tag.color, borderColor: tag.color } : undefined}
+              >
+                {tag.label}
+              </button>
+            );
+          })}
+          {filterTag && (
+            <button
+              onClick={() => onFilterTag?.(null)}
+              className="px-2 py-1 rounded-full text-[11px] font-medium text-[var(--app-text-muted)] hover:text-[var(--app-text)] border border-[var(--app-border)] transition-all"
+            >
+              清除筛选
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Add Task */}
       {view !== 'completed' && !showGantt && (
@@ -296,7 +304,7 @@ export function TaskPanel({
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {view === 'completed' && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Row 1: Heatmap */}
             <HeatmapPanel tasks={tasks} />
             {/* Row 2: Completion Ring + Project Bar */}
@@ -304,7 +312,7 @@ export function TaskPanel({
             {/* Row 3: Task Trend (Bar + Line) */}
             <TaskTrendChart tasks={tasks} />
             {/* Row 4: Recent Completed Tasks */}
-            <CompletedTasksList tasks={tasks} projects={projects} onOpenEdit={onOpenEdit || (() => {})} />
+            <CompletedTasksList tasks={tasks} projects={projects} tags={tags} onOpenEdit={onOpenEdit || (() => {})} />
           </div>
         )}
         {showGantt ? (
@@ -316,7 +324,7 @@ export function TaskPanel({
             onReorderProjects={onReorderProjects}
           />
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {rootTasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <CalendarDays size={48} className="text-[var(--app-border)] mb-4" />
@@ -325,41 +333,39 @@ export function TaskPanel({
                 </p>
               </div>
             ) : (
-              rootTasks.map((task) => (
-                <div
-                  key={task.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, task.id)}
-                  onDragOver={(e) => handleDragOver(e, task.id)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, task.id)}
-                  onDragEnd={handleDragEnd}
-                  className={cn(
-                    'transition-all duration-150',
-                    draggedId === task.id && 'opacity-40 scale-[0.98]',
-                    dragOverId === task.id && !draggedId && 'scale-[1.02]',
-                    dragOverId === task.id && draggedId && draggedId !== task.id && 'border-t-2 border-t-[#d4857a] pt-1'
-                  )}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={rootTasks.map(t => t.id)}
+                  strategy={verticalListSortingStrategy}
                 >
-                  <TaskItem
-                    task={task}
-                    tags={tags}
-                    projects={projects}
-                    contexts={contexts}
-                    collapsedTasks={collapsedTasks}
-                    onToggleCollapsed={toggleCollapsed}
-                    onToggle={onToggleTask}
-                    onDelete={onDeleteTask}
-                    onEdit={onEditTask}
-                    onOpenEdit={setEditingTask}
-                    getChildTasks={getChildTasks}
-                    selected={selectedTaskIds?.includes(task.id)}
-                    selectionMode={selectionMode}
-                    onToggleSelect={onToggleTaskSelection}
-                  />
-                </div>
-              ))
+                  {rootTasks.map((task) => (
+                    <SortableTaskItem
+                      key={task.id}
+                      task={task}
+                      tags={tags}
+                      projects={projects}
+                      contexts={contexts}
+                      allTasks={tasks}
+                      collapsedTasks={collapsedTasks}
+                      onToggleCollapsed={toggleCollapsed}
+                      onToggle={onToggleTask}
+                      onDelete={onDeleteTask}
+                      onEdit={onEditTask}
+                      onOpenEdit={setEditingTask}
+                      getChildTasks={getChildTasks}
+                      selected={selectedTaskIds?.includes(task.id)}
+                      selectionMode={selectionMode}
+                      onToggleSelect={onToggleTaskSelection}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
             )}
+            {view === 'today' && <WeatherTimeWidget />}
           </div>
         )}
       </div>
@@ -371,8 +377,38 @@ export function TaskPanel({
         task={editingTask}
         tags={tags}
         projects={projects}
+        contexts={contexts}
+        allTasks={tasks}
         onSave={onEditFullTask}
       />
+    </div>
+  );
+}
+
+// Sortable wrapper for TaskItem
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+function SortableTaskItem({ task, ...props }: any) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    scale: isDragging ? 0.98 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <TaskItem task={task} {...props} />
     </div>
   );
 }

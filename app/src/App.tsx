@@ -1,21 +1,22 @@
 import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
-import type { Task, ViewType, DisplayMode, Checklist, Perspective, Context } from '@/types';
+import type { Task, DisplayMode, Checklist, Perspective, Context } from '@/types';
 import { DEFAULT_TAGS, DEFAULT_PROJECTS, DEFAULT_CHECKLISTS, DEFAULT_CONTEXTS, DEFAULT_PERSPECTIVES } from '@/types';
 import { getToday } from '@/utils/date';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { syncPut } from '@/utils/api';
+import { useCloudSync } from '@/hooks/useCloudSync';
 import { usePomodoro } from '@/hooks/usePomodoro';
 import { useFontSize } from '@/hooks/useFontSize';
 import { useTaskTemplates } from '@/hooks/useTaskTemplates';
+import { useRepeatTasks } from '@/hooks/useRepeatTasks';
 import LZString from 'lz-string';
 import { Sidebar } from '@/components/Sidebar';
-import { TaskPanel } from '@/components/TaskPanel';
-import { CalendarPanel } from '@/components/CalendarPanel';
+import { Dashboard } from '@/components/Dashboard';
 import { PomodoroModal } from '@/components/PomodoroModal';
-import { QuadrantPanel } from '@/components/QuadrantPanel';
-import { CountdownPanel } from '@/components/CountdownPanel';
 import { MobileHeader } from '@/components/MobileHeader';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
-import { MobileDrawer } from '@/components/MobileDrawer';
+import { MobileSidebarDrawer } from '@/components/MobileSidebarDrawer';
+import { MobileRightPanelSheet } from '@/components/MobileRightPanelSheet';
 import { DataSyncPanel } from '@/components/DataSyncPanel';
 import { AIParserModal } from '@/components/AIParserModal';
 import { AISummaryModal } from '@/components/AISummaryModal';
@@ -24,11 +25,19 @@ import { ReviewPanel } from '@/components/ReviewPanel';
 import { ChecklistPanel } from '@/components/ChecklistPanel';
 import { PerspectivesPanel } from '@/components/PerspectivesPanel';
 import { ThemeSettings } from '@/components/ThemeSettings';
-import { WeatherTimeWidget } from '@/components/WeatherTimeWidget';
+import { NotificationSettings } from '@/components/NotificationSettings';
 import { TaskEditModal } from '@/components/TaskEditModal';
 import { SearchModal } from '@/components/SearchModal';
 import { BackupReminder } from '@/components/BackupReminder';
 import { MobileEditDrawer } from '@/components/MobileEditDrawer';
+import { DailyReviewModal } from '@/components/DailyReviewModal';
+import { SettingsModal } from '@/components/SettingsModal';
+import { HabitsPanel } from '@/components/HabitsPanel';
+import { UserInsights } from '@/components/UserInsights';
+import { WeeklyPlan } from '@/components/WeeklyPlan';
+import { SmartScheduler } from '@/components/SmartScheduler';
+import { useHabits } from '@/hooks/useHabits';
+import { useLearningSystem } from '@/hooks/useLearningSystem';
 import type { ThemeColor } from '@/types';
 
 interface AppTheme {
@@ -45,7 +54,7 @@ function App() {
   const [projects, setProjects] = useLocalStorage('sunsama-projects', DEFAULT_PROJECTS);
   const [checklists, setChecklists] = useLocalStorage<Checklist[]>('sunsama-checklists', DEFAULT_CHECKLISTS);
   // OmniFocus-inspired: contexts and perspectives
-  const [contexts] = useLocalStorage<Context[]>('sunsama-contexts', DEFAULT_CONTEXTS);
+  const [contexts, setContexts] = useLocalStorage<Context[]>('sunsama-contexts', DEFAULT_CONTEXTS);
   const [perspectives, setPerspectives] = useLocalStorage<Perspective[]>('sunsama-perspectives', DEFAULT_PERSPECTIVES);
 
   const todayStr = getToday();
@@ -61,6 +70,41 @@ function App() {
     { id: '8', title: '买咖啡豆', completed: false, date: todayStr, tag: 'shopping', duration: 15, pomodoros: 0, createdAt: Date.now() - 5000, order: 7, importance: 'normal', urgency: 'normal', pinned: false, checklistId: 'c2', contexts: ['outdoor'] },
     { id: '9', title: '打印会议资料', completed: false, date: todayStr, tag: 'shopping', duration: 15, pomodoros: 0, createdAt: Date.now() - 6000, order: 8, importance: 'normal', urgency: 'normal', pinned: false, checklistId: 'c2', contexts: ['office'] },
   ]);
+
+  // Cloud sync (only when logged in)
+  const syncData = useMemo(() => ({
+    tasks, projects, checklists, contexts, perspectives, tags,
+  }), [tasks, projects, checklists, contexts, perspectives, tags]);
+
+  const setSyncData = useCallback((key: string, value: any) => {
+    switch (key) {
+      case 'tasks': setTasks(value); break;
+      case 'projects': setProjects(value); break;
+      case 'checklists': setChecklists(value); break;
+      case 'tags': setTags(value); break;
+      case 'contexts': setContexts(value); break;
+      case 'perspectives': setPerspectives(value); break;
+    }
+  }, [setTasks, setProjects, setChecklists, setTags, setContexts, setPerspectives]);
+
+  const { pullFromServer } = useCloudSync(syncData, setSyncData);
+
+  // Pull data from server on startup (once)
+  useEffect(() => {
+    pullFromServer();
+  }, []);
+
+  // Daily review: show once per day on first visit
+  useEffect(() => {
+    const lastReviewDate = localStorage.getItem('sunsama-last-review-date');
+    const todayStr = getToday();
+    if (lastReviewDate !== todayStr) {
+      // Show review after a short delay to let UI settle
+      const timer = setTimeout(() => setDailyReviewOpen(true), 2000);
+      localStorage.setItem('sunsama-last-review-date', todayStr);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-color-scheme', theme.colorScheme);
@@ -108,30 +152,38 @@ function App() {
   }, [setTheme]);
 
   const [selectedDate, setSelectedDate] = useLocalStorage<string>('sunsama-selected-date', getToday());
-  const [view, setView] = useState<ViewType>('today');
+  const [view, setView] = useState<string>('today');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('list');
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [filterContext, setFilterContext] = useState<string[]>([]);
   const [filterProject, setFilterProject] = useState<string | null>(null);
   const [pomodoroOpen, setPomodoroOpen] = useState(false);
-  const [mobileDrawer, setMobileDrawer] = useState<'calendar' | 'quadrant' | 'countdown' | 'sidebar' | null>(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileRightPanelOpen, setMobileRightPanelOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const [aiParserOpen, setAiParserOpen] = useState(false);
   const [aiSummaryOpen, setAiSummaryOpen] = useState(false);
+  const [aiSummaryRange, setAiSummaryRange] = useState<'overall' | 'week' | 'month'>('overall');
   const [themeSettingsOpen, setThemeSettingsOpen] = useState(false);
+  const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [dailyReviewOpen, setDailyReviewOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   // Batch selection state
   const [_selectedTaskIds] = useState<string[]>([]);
 
   // Undo history: keep last 10 snapshots
   const historyRef = useRef<Task[][]>([]);
   const undoFlagRef = useRef(false);
+  // Ref to always have latest tasks without triggering dep changes
+  const tasksRef = useRef(tasks);
+  tasksRef.current = tasks;
 
   const pushHistory = useCallback(() => {
-    historyRef.current.push(tasks);
+    historyRef.current.push([...tasksRef.current]);
     if (historyRef.current.length > 10) historyRef.current.shift();
-  }, [tasks]);
+  }, []);
 
   const undo = useCallback(() => {
     const snapshot = historyRef.current.pop();
@@ -148,6 +200,24 @@ function App() {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
+        return;
+      }
+      // Ctrl+N quick add task
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        setEditingTask({ id: '', title: '', completed: false, date: selectedDate, tag: 'work', pomodoros: 0, notes: '', deadline: '', order: tasks.length, pinned: false, duration: 0, createdAt: Date.now(), importance: 'normal', urgency: 'normal' });
+        return;
+      }
+      // Ctrl+T toggle theme
+      if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+        e.preventDefault();
+        toggleTheme();
+        return;
+      }
+      // Ctrl+Enter start pomodoro
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        setPomodoroOpen(true);
         return;
       }
       // / open search (when not typing)
@@ -169,12 +239,18 @@ function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [editingTask, syncOpen, aiParserOpen, aiSummaryOpen, themeSettingsOpen, pomodoroOpen, searchOpen, undo]);
+  }, [editingTask, syncOpen, aiParserOpen, aiSummaryOpen, themeSettingsOpen, pomodoroOpen, searchOpen, undo, toggleTheme, selectedDate, filterTag, tasks.length]);
 
   const pomodoro = usePomodoro();
+  const { processCompletedRepeatTask } = useRepeatTasks(tasks, setTasks);
+  const habits = useHabits();
+  const learning = useLearningSystem(tasks);
 
   // Notification permission & reminder checker (deadline + pomodoro)
   const notifiedTasksRef = useRef<Set<string>>(new Set());
+  // Use ref to access latest pomodoro values without triggering effect re-runs
+  const pomodoroRef = useRef(pomodoro);
+  pomodoroRef.current = pomodoro;
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
@@ -206,7 +282,8 @@ function App() {
           }
         }
       });
-      if (pomodoro.isRunning && pomodoro.minutes === 1 && pomodoro.seconds === 0) {
+      const p = pomodoroRef.current;
+      if (p.isRunning && p.minutes === 1 && p.seconds === 0) {
         new Notification('番茄钟即将结束', {
           body: '还有1分钟，准备休息一下',
           icon: '/favicon.ico',
@@ -215,7 +292,7 @@ function App() {
       }
     }, 30000);
     return () => clearInterval(interval);
-  }, [tasks, pomodoro]);
+  }, [tasks]);
 
   // Apply context + project filter to tasks passed to TaskPanel
   const contextFilteredTasks = useMemo(() => {
@@ -240,30 +317,46 @@ function App() {
 
   const handleAddTask = useCallback((taskData: Omit<Task, 'id' | 'createdAt' | 'order'>) => {
     pushHistory();
-    const maxOrder = tasks.reduce((max, t) => Math.max(max, t.order), -1);
-    // Auto-assign checklistId based on tag matching checklist's defaultTag
-    let checklistId = taskData.checklistId;
-    if (!checklistId) {
-      const matchedChecklist = checklists.find(c => c.defaultTag === taskData.tag && !c.archived);
-      if (matchedChecklist) {
-        checklistId = matchedChecklist.id;
+    setTasks(prev => {
+      const maxOrder = prev.reduce((max, t) => Math.max(max, t.order), -1);
+      let checklistId = taskData.checklistId;
+      if (!checklistId) {
+        const matchedChecklist = checklists.find(c => c.defaultTag === taskData.tag && !c.archived);
+        if (matchedChecklist) {
+          checklistId = matchedChecklist.id;
+        }
       }
-    }
-    const newTask: Task = { ...taskData, checklistId, id: crypto.randomUUID(), createdAt: Date.now(), order: maxOrder + 1 };
-    setTasks(prev => [newTask, ...prev]);
-  }, [tasks, setTasks, pushHistory, checklists]);
+      const newTask: Task = { ...taskData, checklistId, id: crypto.randomUUID(), createdAt: Date.now(), order: maxOrder + 1 };
+      return [newTask, ...prev];
+    });
+  }, [setTasks, pushHistory, checklists]);
 
   const handleToggleTask = useCallback((id: string) => {
     pushHistory();
-    setTasks(prev => prev.map(t => {
-      if (t.id !== id) return t;
-      return {
-        ...t,
-        completed: !t.completed,
-        completedAt: !t.completed ? Date.now() : undefined,
-      };
-    }));
-  }, [setTasks, pushHistory]);
+    setTasks(prev => {
+      const task = prev.find(t => t.id === id);
+      if (!task) return prev;
+      const updated = prev.map(t => {
+        if (t.id !== id) return t;
+        return {
+          ...t,
+          completed: !t.completed,
+          completedAt: !t.completed ? Date.now() : undefined,
+        };
+      });
+      // If task was just completed and has repeat, create next occurrence
+      const REPEAT_TYPES = ['daily', 'weekly', 'monthly'] as const;
+      if (!task.completed && task.repeat && REPEAT_TYPES.includes(task.repeat as any)) {
+        // We need to use the updated task (which is now completed)
+        const completedTask = updated.find(t => t.id === id);
+        if (completedTask) {
+          // Schedule repeat task creation after state update
+          setTimeout(() => processCompletedRepeatTask(completedTask), 0);
+        }
+      }
+      return updated;
+    });
+  }, [setTasks, pushHistory, processCompletedRepeatTask]);
 
   const handleDeleteTask = useCallback((id: string) => {
     pushHistory();
@@ -301,7 +394,7 @@ function App() {
     setView('today');
   }, [setSelectedDate]);
 
-  const handleChangeView = useCallback((v: ViewType) => {
+  const handleChangeView = useCallback((v: string) => {
     setView(v);
     setFilterTag(null);
     setFilterContext([]);
@@ -316,8 +409,16 @@ function App() {
 
   const handleEditFullTask = useCallback((id: string, updates: Partial<Task>) => {
     pushHistory();
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-  }, [setTasks, pushHistory]);
+    setTasks(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
+      // Check if task was completed via edit (save & complete)
+      const task = updated.find(t => t.id === id);
+      if (task?.completed && task.repeat && task.repeat !== 'none') {
+        setTimeout(() => processCompletedRepeatTask(task), 0);
+      }
+      return updated;
+    });
+  }, [setTasks, pushHistory, processCompletedRepeatTask]);
 
   const handleUpdateTaskQuadrant = useCallback((id: string, importance: 'important' | 'normal', urgency: 'urgent' | 'normal') => {
     pushHistory();
@@ -345,6 +446,55 @@ function App() {
     });
   }, [setTasks]);
 
+  // ─── Auto Planner callbacks ───
+
+  // Apply schedule: set times for multiple tasks at once
+  const handleApplySchedule = useCallback((updates: { id: string; time: string }[]) => {
+    pushHistory();
+    setTasks(prev => prev.map(t => {
+      const update = updates.find(u => u.id === t.id);
+      return update ? { ...t, time: update.time } : t;
+    }));
+  }, [setTasks, pushHistory]);
+
+  // Add child tasks (breakdown)
+  const handleAddSubTasks = useCallback((parentId: string, steps: string[]) => {
+    pushHistory();
+    setTasks(prev => {
+      const parent = prev.find(t => t.id === parentId);
+      if (!parent) return prev;
+      const maxOrder = prev.reduce((max, t) => Math.max(max, t.order), -1);
+      const newTasks: Task[] = steps.map((step, i) => ({
+        id: crypto.randomUUID(),
+        title: step,
+        completed: false,
+        date: parent.date,
+        tag: parent.tag,
+        projectId: parent.projectId,
+        pomodoros: 0,
+        createdAt: Date.now(),
+        order: maxOrder + i + 1,
+        parentId,
+        pinned: false,
+        duration: Math.max(30, Math.floor((parent.duration || 60) / steps.length)),
+        importance: parent.importance,
+        urgency: parent.urgency,
+      }));
+      return [...newTasks, ...prev];
+    });
+  }, [setTasks, pushHistory]);
+
+  // Update priority
+  const handleUpdatePriority = useCallback((id: string, importance: 'important' | 'normal', urgency: 'urgent' | 'normal') => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, importance, urgency } : t));
+  }, [setTasks]);
+
+  // Reschedule task to a new date
+  const handleReschedule = useCallback((id: string, date: string) => {
+    pushHistory();
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, date } : t));
+  }, [setTasks, pushHistory]);
+
   // Export archive: export completed tasks by date
   const handleExportArchive = useCallback(() => {
     const completed = tasks.filter(t => t.completed);
@@ -371,112 +521,114 @@ function App() {
   }, [tasks]);
 
   return (
-    <div className="h-[100dvh] flex flex-col lg:p-4 lg:gap-4 p-2 gap-2 overflow-hidden">
+    <div className="h-screen flex overflow-hidden" style={{ background: 'var(--color-bg)' }}>
       {/* Backup Reminder Banner */}
       <BackupReminder onOpenSync={() => setSyncOpen(true)} />
 
-      {/* Mobile Header */}
-      <MobileHeader
-        isDark={theme.isDark} onToggleTheme={toggleTheme} view={view} onChangeView={handleChangeView}
-        onOpenPomodoro={() => setPomodoroOpen(true)} completedToday={pomodoro.completedToday}
-        onOpenDrawer={setMobileDrawer} onOpenSync={() => setSyncOpen(true)} onOpenAI={() => setAiParserOpen(true)} onOpenSidebar={() => setMobileDrawer('sidebar')}
-      />
-
-      {/* Main Content */}
-      <div className="flex-1 flex lg:gap-4 gap-2 min-h-0">
-        {/* Left Sidebar - desktop only */}
-        <div className="hidden lg:block">
-          <Sidebar
-            view={view} onChangeView={handleChangeView} filterTag={filterTag} onFilterTag={setFilterTag}
-            filterContext={filterContext} onFilterContext={setFilterContext}
-            filterProject={filterProject} onFilterProject={setFilterProject}
-            tasks={tasks} completedToday={pomodoro.completedToday} onOpenPomodoro={() => setPomodoroOpen(true)}
-            isDark={theme.isDark} onToggleTheme={toggleTheme} tags={tags} onUpdateTags={setTags}
-            projects={projects} onUpdateProjects={setProjects} contexts={contexts}
-            onOpenSync={() => setSyncOpen(true)} onOpenAI={() => setAiParserOpen(true)}
-            onOpenThemeSettings={() => setThemeSettingsOpen(true)}
-          />
-        </div>
-
-        {/* Center Content - conditional by view */}
-        {view === 'checklist' ? (
-          <ChecklistPanel
-            tasks={tasks} checklists={checklists} tags={tags}
-            onAddTask={handleAddTask} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask}
-            onEditTask={handleEditTask} onTogglePin={handleTogglePin} onSetReminder={handleSetReminder}
-            onOpenEdit={handleOpenEdit} onUpdateChecklists={setChecklists} onReorderTasks={handleReorderTasks}
-            onExportArchive={handleExportArchive}
-          />
-        ) : view === 'mindmap' ? (
-          <MindMapPanel />
-        ) : view === 'review' ? (
-          <ReviewPanel
-            tasks={tasks} checklists={checklists} projects={projects} tags={tags}
-            onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask}
-          />
-        ) : view === 'perspectives' ? (
-          <PerspectivesPanel
-            tasks={tasks}
-            perspectives={perspectives}
-            contexts={contexts}
-            tags={tags}
-            projects={projects}
-            onToggleTask={handleToggleTask}
-            onDeleteTask={handleDeleteTask}
-            onEditFullTask={handleEditFullTask}
-            onUpdatePerspectives={setPerspectives}
-          />
-        ) : (
-          <TaskPanel
-            tasks={contextFilteredTasks} selectedDate={selectedDate} view={view} displayMode={displayMode}
-            onChangeDisplayMode={handleChangeDisplayMode} filterTag={filterTag} onSelectDate={handleSelectDate}
-            onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask}
-            onEditFullTask={handleEditFullTask} onAddTask={handleAddTask} onReorderTasks={handleReorderTasks}
-            completedToday={pomodoro.completedToday} tags={tags} projects={projects} contexts={contexts} templates={taskTemplates.templates}
-            onOpenEdit={setEditingTask}
-            onReorderProjects={setProjects}
-          />
-        )}
-
-        {/* Right Column - desktop only, hide on checklist/perspectives view */}
-        {view !== 'checklist' && view !== 'perspectives' && (
-          <div className="hidden lg:flex w-[320px] shrink-0 flex-col gap-4 overflow-y-auto">
-            <WeatherTimeWidget />
-            <CalendarPanel tasks={tasks} selectedDate={selectedDate} onSelectDate={handleSelectDate} />
-            <QuadrantPanel tasks={tasks} selectedDate={selectedDate} view={view} onToggleTask={handleToggleTask} onUpdateQuadrant={handleUpdateTaskQuadrant} />
-            <CountdownPanel tasks={tasks} onToggleTask={handleToggleTask} onOpenEdit={setEditingTask} />
-          </div>
-        )}
+      {/* === Sidebar — Desktop (>=768px) === */}
+      <div className="hidden md:flex flex-shrink-0 h-full border-r border-[var(--color-border)]">
+        <Sidebar
+          view={view} onChangeView={handleChangeView}
+          onOpenSettings={() => setSettingsOpen(true)}
+          tags={tags} filterTag={filterTag} onFilterTag={setFilterTag}
+          projects={projects} filterProject={filterProject} onFilterProject={setFilterProject}
+          contexts={contexts} filterContext={filterContext} onFilterContext={setFilterContext}
+          onUpdateProjects={setProjects} onUpdateTags={setTags} onUpdateContexts={setContexts}
+        />
       </div>
 
-      {/* Mobile Bottom Nav */}
-      <MobileBottomNav view={view} onChangeView={handleChangeView} onOpenPomodoro={() => setPomodoroOpen(true)} />
+      {/* === Main Content Area === */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-0" style={{ background: 'var(--color-bg)' }}>
+        {/* Mobile Header (< md) */}
+        <header className="md:hidden flex-shrink-0 border-b border-[var(--color-border)] px-4 py-3">
+          <MobileHeader
+            view={view}
+            onOpenSidebar={() => setMobileSidebarOpen(true)}
+            onOpenRightPanel={() => setMobileRightPanelOpen(true)}
+            completedToday={pomodoro.completedToday}
+          />
+        </header>
 
-      {/* Mobile Drawer for Calendar/Quadrant/Countdown/Sidebar */}
-      <MobileDrawer
-        isOpen={mobileDrawer !== null} onClose={() => setMobileDrawer(null)} type={mobileDrawer}
-        tasks={tasks} selectedDate={selectedDate} view={view} onToggleTask={handleToggleTask}
-        onUpdateQuadrant={handleUpdateTaskQuadrant} onSelectDate={handleSelectDate}
-        onChangeView={handleChangeView} filterTag={filterTag} onFilterTag={setFilterTag}
-        filterContext={filterContext} onFilterContext={setFilterContext}
-        filterProject={filterProject} onFilterProject={setFilterProject}
-        completedToday={pomodoro.completedToday} onOpenPomodoro={() => setPomodoroOpen(true)}
-        isDark={theme.isDark} onToggleTheme={toggleTheme} tags={tags} onUpdateTags={setTags}
-        projects={projects} onUpdateProjects={setProjects} contexts={contexts}
-        onOpenSync={() => setSyncOpen(true)} onOpenAI={() => setAiParserOpen(true)}
-        onOpenThemeSettings={() => setThemeSettingsOpen(true)}
+        {/* Desktop Toolbar (>=768px) */}
+        <div className="hidden md:flex flex-shrink-0 items-center justify-end gap-2 px-6 py-3 border-b border-[var(--color-border)]">
+          <button onClick={() => setAiParserOpen(true)} className="btn-ghost text-xs">✨ AI 解析</button>
+          <button onClick={() => setSearchOpen(true)} className="btn-ghost text-xs">🔍 搜索</button>
+        </div>
+
+        {/* Scrollable Content */}
+        <main className="flex-1 overflow-y-auto">
+          {view === 'checklist' ? (
+            <div className="p-6">
+              <ChecklistPanel
+                tasks={tasks} checklists={checklists} tags={tags}
+                onAddTask={handleAddTask} onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask}
+                onEditTask={handleEditTask} onTogglePin={handleTogglePin} onSetReminder={handleSetReminder}
+                onOpenEdit={handleOpenEdit} onUpdateChecklists={setChecklists} onReorderTasks={handleReorderTasks}
+                onExportArchive={handleExportArchive}
+              />
+            </div>
+          ) : view === 'mindmap' ? (
+            <MindMapPanel />
+          ) : view === 'review' ? (
+            <div className="p-6">
+              <ReviewPanel tasks={tasks} checklists={checklists} projects={projects} tags={tags}
+                onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} />
+            </div>
+          ) : view === 'perspectives' ? (
+            <PerspectivesPanel tasks={tasks} perspectives={perspectives} contexts={contexts} tags={tags} projects={projects}
+              onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} onEditFullTask={handleEditFullTask}
+              onUpdatePerspectives={setPerspectives} />
+          ) : view === 'habits' ? (
+            <div className="p-6">
+              <HabitsPanel habits={habits.habits} logs={habits.logs}
+                onAddHabit={habits.addHabit} onDeleteHabit={habits.deleteHabit} onToggleLog={habits.toggleLog} />
+            </div>
+          ) : view === 'insights' ? (
+            <UserInsights insights={{ profile: learning.profile, timeSlotStats: learning.timeSlotStats, tagStats: learning.tagStats, weeklyTrend: learning.weeklyTrend, optimizationTips: learning.optimizationTips }} />
+          ) : view === 'weeklyplan' ? (
+            <WeeklyPlan onGenerate={learning.generateWeeklyPlan} />
+          ) : view === 'scheduler' ? (
+            <SmartScheduler date={selectedDate} onGenerate={learning.generateSmartSchedule}
+              pendingCount={learning.pendingTasks.filter(t => t.date === selectedDate).length} />
+          ) : (
+            <Dashboard
+              tasks={contextFilteredTasks} selectedDate={selectedDate} view={view as 'today' | 'week'} displayMode={displayMode}
+              onChangeDisplayMode={handleChangeDisplayMode} filterTag={filterTag} onFilterTag={setFilterTag} onSelectDate={handleSelectDate}
+              onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask}
+              onEditFullTask={handleEditFullTask} onAddTask={handleAddTask} onReorderTasks={handleReorderTasks}
+              completedToday={pomodoro.completedToday} tags={tags} projects={projects} contexts={contexts} templates={taskTemplates.templates}
+              onOpenEdit={setEditingTask} onReorderProjects={setProjects}
+              onApplySchedule={handleApplySchedule} onAddSubTasks={handleAddSubTasks}
+              onUpdatePriority={handleUpdatePriority} onReschedule={handleReschedule}
+            />
+          )}
+        </main>
+
+        {/* Mobile Bottom Nav (<768px) */}
+        <nav className="md:hidden flex-shrink-0 border-t border-[var(--color-border)]">
+          <MobileBottomNav view={view} onChangeView={handleChangeView} onOpenPomodoro={() => setPomodoroOpen(true)} />
+        </nav>
+      </div>
+
+      {/* === Overlays === */}
+      <MobileSidebarDrawer
+        isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)}
+        view={view} onChangeView={handleChangeView}
+        isDark={theme.isDark} onToggleTheme={toggleTheme}
+        tags={tags} onFilterTag={setFilterTag} filterTag={filterTag}
+        projects={projects} filterProject={filterProject} onFilterProject={setFilterProject}
+        contexts={contexts} filterContext={filterContext} onFilterContext={setFilterContext}
+        onUpdateTags={setTags} onUpdateProjects={setProjects} onUpdateContexts={setContexts}
       />
-
-      {/* Global Search Modal */}
-      <SearchModal
-        isOpen={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        tasks={tasks}
-        projects={projects}
-        contexts={contexts}
-        tags={tags}
-        onOpenEdit={setEditingTask}
-        onSelectDate={handleSelectDate}
+      <MobileRightPanelSheet
+        isOpen={mobileRightPanelOpen} onClose={() => setMobileRightPanelOpen(false)}
+        tasks={tasks} selectedDate={selectedDate} view={view}
+        onSelectDate={handleSelectDate} onToggleTask={handleToggleTask}
+        onUpdateQuadrant={handleUpdateTaskQuadrant} onOpenEdit={setEditingTask} tags={tags}
+      />
+      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)}
+        tasks={tasks} projects={projects} contexts={contexts} tags={tags}
+        onOpenEdit={setEditingTask} onSelectDate={handleSelectDate}
       />
 
       {/* Task Edit Modal */}
@@ -496,15 +648,57 @@ function App() {
         isOpen={syncOpen}
         onClose={() => setSyncOpen(false)}
         currentData={{ version: 2, exportDate: new Date().toISOString(), tasks, tags, projects, checklists, contexts, perspectives, theme, selectedDate }}
-        onImport={(data) => {
-          localStorage.setItem('sunsama-tasks', JSON.stringify(data.tasks));
+        onImport={async (data) => {
+          // Generate new IDs for all imported data to avoid conflicts with existing data
+          const makeId = () => crypto.randomUUID();
+
+          const newTasks = (data.tasks || []).map(t => ({ ...t, id: makeId() }));
+          const newProjects = (data.projects || []).map(p => ({ ...p, id: makeId() }));
+          const newChecklists = (data.checklists || []).map(c => ({ ...c, id: makeId() }));
+          const newContexts = (data.contexts || []).map(c => ({ ...c, id: makeId() }));
+          const newPerspectives = (data.perspectives || []).map(p => ({ ...p, id: makeId() }));
+
+          // Map old checklist/project IDs in tasks to new IDs
+          const projectMap: Record<string, string> = {};
+          (data.projects || []).forEach((p, i) => { projectMap[p.id] = newProjects[i].id; });
+          const checklistMap: Record<string, string> = {};
+          (data.checklists || []).forEach((c, i) => { checklistMap[c.id] = newChecklists[i].id; });
+          const contextMap: Record<string, string> = {};
+          (data.contexts || []).forEach((c, i) => { contextMap[c.id] = newContexts[i].id; });
+
+          const remappedTasks = newTasks.map(t => ({
+            ...t,
+            projectId: t.projectId ? (projectMap[t.projectId] || t.projectId) : undefined,
+            checklistId: t.checklistId ? (checklistMap[t.checklistId] || t.checklistId) : undefined,
+            contexts: (t.contexts || []).map((ctx: string) => contextMap[ctx] || ctx),
+          }));
+
+          // Write to localStorage
+          localStorage.setItem('sunsama-tasks', JSON.stringify(remappedTasks));
           if (data.tags) localStorage.setItem('sunsama-tags', JSON.stringify(data.tags));
-          if (data.projects) localStorage.setItem('sunsama-projects', JSON.stringify(data.projects));
-          if (data.checklists) localStorage.setItem('sunsama-checklists', JSON.stringify(data.checklists));
-          if (data.contexts) localStorage.setItem('sunsama-contexts', JSON.stringify(data.contexts));
-          if (data.perspectives) localStorage.setItem('sunsama-perspectives', JSON.stringify(data.perspectives));
+          if (data.projects) localStorage.setItem('sunsama-projects', JSON.stringify(newProjects));
+          if (data.checklists) localStorage.setItem('sunsama-checklists', JSON.stringify(newChecklists));
+          if (data.contexts) localStorage.setItem('sunsama-contexts', JSON.stringify(newContexts));
+          if (data.perspectives) localStorage.setItem('sunsama-perspectives', JSON.stringify(newPerspectives));
           if (data.theme) localStorage.setItem('sunsama-theme', JSON.stringify(data.theme));
           if (data.selectedDate) localStorage.setItem('sunsama-selected-date', JSON.stringify(data.selectedDate));
+
+          // Push to server BEFORE reload, so pullFromServer gets the imported data
+          try {
+            await syncPut({
+              tasks: remappedTasks,
+              projects: newProjects,
+              checklists: newChecklists,
+              tags: Object.entries(data.tags || {}).map(([key, val]) => ({
+                id: `tag_${key}`, label: val.label, color: val.color,
+              })),
+              contexts: newContexts,
+              perspectives: newPerspectives,
+            });
+          } catch (e) {
+            console.warn('导入数据同步到服务器失败，将基于本地数据恢复:', e);
+          }
+
           window.location.reload();
         }}
       />
@@ -522,6 +716,8 @@ function App() {
         isOpen={aiSummaryOpen}
         onClose={() => setAiSummaryOpen(false)}
         tasks={tasks}
+        timeRange={aiSummaryRange}
+        onTimeRangeChange={setAiSummaryRange}
       />
 
       {/* Theme Settings Modal */}
@@ -549,6 +745,35 @@ function App() {
         projects={projects}
         contexts={contexts}
         onSave={handleEditFullTask}
+      />
+
+      {/* Notification Settings Modal */}
+      <NotificationSettings
+        isOpen={notificationSettingsOpen}
+        onClose={() => setNotificationSettingsOpen(false)}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onOpenSync={() => setSyncOpen(true)}
+        onOpenTheme={() => setThemeSettingsOpen(true)}
+        onExportArchive={handleExportArchive}
+        colorScheme={theme.colorScheme}
+        isDark={theme.isDark}
+        onChangeColorScheme={changeColorScheme}
+        onToggleDark={toggleTheme}
+      />
+
+      {/* Daily Review Modal */}
+      <DailyReviewModal
+        isOpen={dailyReviewOpen}
+        onClose={() => setDailyReviewOpen(false)}
+        tasks={tasks}
+        pomodoroCompletedToday={pomodoro.completedToday}
+        date={selectedDate}
+        onOpenReview={() => { setView('review'); setDailyReviewOpen(false); }}
       />
 
       {/* Pomodoro Modal */}

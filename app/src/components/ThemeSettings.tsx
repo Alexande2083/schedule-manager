@@ -38,9 +38,9 @@ const themeOptions: ThemeOption[] = [
   { id: 'mint', name: '薄荷', description: '清新薄荷绿', previewColor: '#5abf84' },
   { id: 'lavender', name: '薰衣草', description: '优雅薰衣草', previewColor: '#9b7edc' },
   { id: 'amber', name: '琥珀', description: '经典琥珀金', previewColor: '#d4900a' },
-  { id: 'glass', name: '液态玻璃', description: '液态玻璃质感', previewColor: '#8899aa' },
-  { id: 'pure-white', name: '纯净白', description: '极简纯净白', previewColor: '#f5f5f7' },
-  { id: 'pure-black', name: '暗夜黑', description: '深邃暗夜黑', previewColor: '#1c1c1e' },
+  { id: 'rose', name: '玫瑰', description: '浪漫玫瑰粉', previewColor: '#ec4899' },
+  { id: 'sky', name: '天蓝', description: '明亮天空蓝', previewColor: '#3b82f6' },
+  { id: 'sunset', name: '落日', description: '活力落日橙', previewColor: '#f97316' },
 ];
 
 export function ThemeSettings({
@@ -87,7 +87,7 @@ export function ThemeSettings({
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-[var(--app-border)]">
           <div className="flex items-center gap-2">
-            <Palette size={18} className="text-[#d4857a]" />
+            <Palette size={18} className="text-[var(--app-accent)]" />
             <h3 className="text-base font-semibold text-[var(--app-text)]">个性化设置</h3>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--app-text-muted)] hover:text-[var(--app-text)] transition-all">
@@ -102,7 +102,7 @@ export function ThemeSettings({
             className={cn(
               'px-4 py-2.5 text-xs font-medium transition-all border-b-2',
               activeTab === 'theme'
-                ? 'border-[#d4857a] text-[#d4857a]'
+                ? 'border-[var(--app-accent)] text-[var(--app-accent)]'
                 : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text)]'
             )}
           >
@@ -113,7 +113,7 @@ export function ThemeSettings({
             className={cn(
               'px-4 py-2.5 text-xs font-medium transition-all border-b-2',
               activeTab === 'tags'
-                ? 'border-[#d4857a] text-[#d4857a]'
+                ? 'border-[var(--app-accent)] text-[var(--app-accent)]'
                 : 'border-transparent text-[var(--app-text-muted)] hover:text-[var(--app-text)]'
             )}
           >
@@ -143,7 +143,7 @@ export function ThemeSettings({
                       className={cn(
                         'flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all',
                         fontSize === opt.key
-                          ? 'bg-[#d4857a] text-white border-[#d4857a]'
+                          ? 'bg-[var(--app-accent)] text-white border-[var(--app-accent)]'
                           : 'bg-[var(--app-surface)] text-[var(--app-text-secondary)] border-[var(--app-border)] hover:text-[var(--app-text)]'
                       )}
                     >
@@ -166,7 +166,7 @@ export function ThemeSettings({
                     max={95}
                     value={glassOpacity}
                     onChange={(e) => onChangeGlassOpacity?.(Number(e.target.value))}
-                    className="flex-1 h-1.5 bg-[var(--app-border)] rounded-full appearance-none cursor-pointer accent-[#d4857a]"
+                    className="flex-1 h-1.5 bg-[var(--app-border)] rounded-full appearance-none cursor-pointer accent-[var(--app-accent)]"
                   />
                   <span className="text-xs font-medium text-[var(--app-text-secondary)] w-10 text-right">
                     {glassOpacity}%
@@ -183,7 +183,7 @@ export function ThemeSettings({
                     className={cn(
                       'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all flex-1',
                       !isDark
-                        ? 'bg-[#d4857a] text-white border-[#d4857a]'
+                        ? 'bg-[var(--app-accent)] text-white border-[var(--app-accent)]'
                         : 'bg-[var(--app-surface)] text-[var(--app-text-secondary)] border-[var(--app-border)] hover:text-[var(--app-text)]'
                     )}
                   >
@@ -195,7 +195,7 @@ export function ThemeSettings({
                     className={cn(
                       'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all flex-1',
                       isDark
-                        ? 'bg-[#d4857a] text-white border-[#d4857a]'
+                        ? 'bg-[var(--app-accent)] text-white border-[var(--app-accent)]'
                         : 'bg-[var(--app-surface)] text-[var(--app-text-secondary)] border-[var(--app-border)] hover:text-[var(--app-text)]'
                     )}
                   >
@@ -216,8 +216,8 @@ export function ThemeSettings({
                       className={cn(
                         'flex items-center gap-3 p-3 rounded-xl border text-left transition-all',
                         colorScheme === option.id
-                          ? 'border-[#d4857a] bg-[#d4857a]/5'
-                          : 'border-[var(--app-border)] hover:border-[#d4857a]/30'
+                          ? 'border-[var(--app-accent)] bg-[var(--app-accent)]/5'
+                          : 'border-[var(--app-border)] hover:border-[var(--app-accent)]/30'
                       )}
                     >
                       <div
@@ -229,7 +229,7 @@ export function ThemeSettings({
                         <div className="text-[11px] text-[var(--app-text-muted)]">{option.description}</div>
                       </div>
                       {colorScheme === option.id && (
-                        <Check size={16} className="text-[#d4857a] ml-auto shrink-0" />
+                        <Check size={16} className="text-[var(--app-accent)] ml-auto shrink-0" />
                       )}
                     </button>
                   ))}
@@ -286,18 +286,18 @@ export function ThemeSettings({
                     value={newTagKey}
                     onChange={(e) => setNewTagKey(e.target.value)}
                     placeholder="key"
-                    className="flex-1 text-xs bg-[var(--app-surface)] rounded-lg px-2 py-1.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[#d4857a] placeholder:text-[var(--app-text-placeholder)]"
+                    className="flex-1 text-xs bg-[var(--app-surface)] rounded-lg px-2 py-1.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)] placeholder:text-[var(--app-text-placeholder)]"
                   />
                   <input
                     value={newTagLabel}
                     onChange={(e) => setNewTagLabel(e.target.value)}
                     placeholder="显示名称"
-                    className="flex-1 text-xs bg-[var(--app-surface)] rounded-lg px-2 py-1.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[#d4857a] placeholder:text-[var(--app-text-placeholder)]"
+                    className="flex-1 text-xs bg-[var(--app-surface)] rounded-lg px-2 py-1.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)] placeholder:text-[var(--app-text-placeholder)]"
                   />
                   <button
                     onClick={handleAddTag}
                     disabled={!newTagKey.trim() || !newTagLabel.trim()}
-                    className="px-3 py-1.5 rounded-lg bg-[#d4857a] text-white text-xs font-medium hover:bg-[#c97a6e] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1.5 rounded-lg bg-[var(--app-accent)] text-white text-xs font-medium hover:bg-[var(--app-accent-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus size={14} />
                   </button>

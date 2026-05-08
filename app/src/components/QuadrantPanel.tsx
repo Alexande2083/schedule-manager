@@ -49,13 +49,13 @@ export function QuadrantPanel({ tasks, selectedDate, view, onToggleTask, onUpdat
   ];
 
   return (
-    <div className="glass-panel bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-[var(--app-text)]">四象限</h3>
-        <Settings size={12} className="text-[var(--app-text-muted)]" />
+    <div className="glass-panel bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] p-3 shadow-sm overflow-y-auto">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-semibold text-[var(--app-text-secondary)] tracking-wide">四象限</h3>
+        <Settings size={11} className="text-[var(--app-text-muted)]" />
       </div>
 
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-2 gap-1">
         {quadrants.map((key) => {
           const config = QUADRANT_CONFIG[key];
           const quadrantTasks = filteredTasks.filter(t => getQuadrantKey(t) === key);
@@ -65,7 +65,7 @@ export function QuadrantPanel({ tasks, selectedDate, view, onToggleTask, onUpdat
             <div
               key={key}
               className={cn(
-                'rounded-lg border p-2.5 cursor-pointer transition-all duration-200 overflow-y-auto',
+                'rounded-lg border p-2 cursor-pointer transition-all duration-200 overflow-y-auto',
                 isDark ? config.bgColorDark : config.bgColor,
                 isDark ? config.borderColorDark : config.borderColor,
                 isExpanded && 'ring-2 ring-offset-1',
@@ -73,16 +73,16 @@ export function QuadrantPanel({ tasks, selectedDate, view, onToggleTask, onUpdat
               style={{ maxHeight: '200px', '--tw-ring-color': config.accentColor } as React.CSSProperties}
               onClick={() => setExpandedQuadrant(isExpanded ? null : key)}
             >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className={cn('text-[10px] font-semibold', isDark ? config.textColorDark : config.textColor)}>
+              <div className="flex items-center justify-between mb-1">
+                <span className={cn('text-[9px] font-semibold', isDark ? config.textColorDark : config.textColor)}>
                   {config.label}
                 </span>
-                <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded-full', isDark ? 'bg-black/30' : 'bg-white/60', isDark ? config.textColorDark : config.textColor)}>
+                <span className={cn('text-[9px] font-bold px-1 py-0.5 rounded-full', isDark ? 'bg-black/30' : 'bg-white/60', isDark ? config.textColorDark : config.textColor)}>
                   {quadrantTasks.length}
                 </span>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {quadrantTasks.slice(0, isExpanded ? undefined : 2).map((task) => (
                   <div
                     key={task.id}
@@ -90,25 +90,25 @@ export function QuadrantPanel({ tasks, selectedDate, view, onToggleTask, onUpdat
                       e.stopPropagation();
                       onToggleTask(task.id);
                     }}
-                    className="flex items-center gap-1.5 text-[11px] text-[var(--app-text)] hover:opacity-70 transition-opacity"
+                    className="flex items-center gap-1 text-[10px] text-[var(--app-text-secondary)] hover:opacity-70 transition-opacity"
                   >
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onToggleTask(task.id);
                       }}
-                      className="w-3.5 h-3.5 rounded border border-[var(--app-border)] flex items-center justify-center shrink-0 hover:border-[#d4857a]"
+                      className="w-3 h-3 rounded border border-[var(--app-border)] flex items-center justify-center shrink-0 hover:border-[var(--app-accent)]"
                     >
-                      {task.completed && <CheckCircle2 size={10} className="text-[#8cc68a]" />}
+                      {task.completed && <CheckCircle2 size={8} className="text-[#8cc68a]" />}
                     </button>
                     <span className="truncate">{task.title}</span>
                     {task.deadline && (
-                      <Clock size={9} className="shrink-0 text-[var(--app-text-muted)]" />
+                      <Clock size={8} className="shrink-0 text-[var(--app-text-muted)]" />
                     )}
                   </div>
                 ))}
                 {!isExpanded && quadrantTasks.length > 2 && (
-                  <div className="text-[10px] text-[var(--app-text-muted)] pl-5">
+                  <div className="text-[9px] text-[var(--app-text-muted)] pl-4">
                     +{quadrantTasks.length - 2} 更多
                   </div>
                 )}
@@ -120,8 +120,8 @@ export function QuadrantPanel({ tasks, selectedDate, view, onToggleTask, onUpdat
 
       {/* Expanded Task Editor */}
       {expandedQuadrant && (
-        <div className="mt-3 pt-3 border-t border-[var(--app-border)] space-y-2">
-          <p className="text-[10px] text-[var(--app-text-muted)] uppercase tracking-wider">
+        <div className="mt-2 pt-2 border-t border-[var(--app-border)] space-y-1.5">
+          <p className="text-[9px] text-[var(--app-text-muted)] uppercase tracking-wider">
             点击任务切换重要/紧急状态
           </p>
           {filteredTasks

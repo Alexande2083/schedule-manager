@@ -1,15 +1,17 @@
-import { useState } from 'react';
-import { X, Sparkles, Loader2, Lightbulb, TrendingUp, AlertCircle, CheckCircle2, Target, Zap } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { X, Sparkles, Loader2, Lightbulb, TrendingUp, AlertCircle, CheckCircle2, Target, Zap, Calendar } from 'lucide-react';
 import type { Task } from '@/types';
 import { cn } from '@/lib/utils';
 
-// 后端代理地址 — 开发时由 Vite 代理，生产时同域
 const API_BASE = '';
 
 interface AISummaryModalProps {
   isOpen: boolean;
   onClose: () => void;
   tasks: Task[];
+  /** Optional time range for weekly/monthly report */
+  timeRange?: 'overall' | 'week' | 'month';
+  onTimeRangeChange?: (range: 'overall' | 'week' | 'month') => void;
 }
 
 interface SummarySection {
@@ -19,28 +21,40 @@ interface SummarySection {
   color: string;
 }
 
-export function AISummaryModal({ isOpen, onClose, tasks }: AISummaryModalProps) {
+export function AISummaryModal({ isOpen, onClose, tasks, timeRange = 'overall', onTimeRangeChange }: AISummaryModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sections, setSections] = useState<SummarySection[]>([]);
   const [rawContent, setRawContent] = useState('');
 
+  // Filter tasks by time range
+  const filteredTasks = useMemo(() => {
+    if (timeRange === 'overall') return tasks;
+    const now = new Date();
+    let cutoff: Date;
+    if (timeRange === 'week') {
+      cutoff = new Date(now);
+      cutoff.setDate(cutoff.getDate() - 7);
+    } else {
+      cutoff = new Date(now);
+      cutoff.setMonth(cutoff.getMonth() - 1);
+    }
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    return tasks.filter(t => t.date >= cutoffStr);
+  }, [tasks, timeRange]);
+
   const generatePrompt = () => {
-    const completed = tasks.filter(t => t.completed);
-    const pending = tasks.filter(t => !t.completed);
+    const completed = filteredTasks.filter(t => t.completed);
+    const pending = filteredTasks.filter(t => !t.completed);
 
     const completedByTag: Record<string, number> = {};
     const pendingByTag: Record<string, number> = {};
-    const completedByProject: Record<string, number> = {};
-    const pendingByProject: Record<string, number> = {};
 
     completed.forEach(t => {
       completedByTag[t.tag] = (completedByTag[t.tag] || 0) + 1;
-      if (t.projectId) completedByProject[t.projectId] = (completedByProject[t.projectId] || 0) + 1;
     });
     pending.forEach(t => {
       pendingByTag[t.tag] = (pendingByTag[t.tag] || 0) + 1;
-      if (t.projectId) pendingByProject[t.projectId] = (pendingByProject[t.projectId] || 0) + 1;
     });
 
     const avgDuration = completed.length > 0
@@ -48,54 +62,55 @@ export function AISummaryModal({ isOpen, onClose, tasks }: AISummaryModalProps) 
       : 0;
 
     const pinnedPending = pending.filter(t => t.pinned).length;
-    const withDeadline = pending.filter(t => t.deadline).length;
     const overdue = pending.filter(t => t.deadline && new Date(t.deadline) < new Date()).length;
     const importantUrgent = pending.filter(t => t.importance === 'important' && t.urgency === 'urgent').length;
+    // Count pomodoros
+    const totalPomodoros = completed.reduce((s, t) => s + (t.pomodoros || 0), 0);
 
-    const taskList = tasks.slice(0, 30).map(t =>
-      `- ${t.title} [${t.completed ? '完成' : '待办'}] 标签:${t.tag} 项目:${t.projectId || '无'} ${t.deadline ? '截止:' + t.deadline : ''} ${t.pinned ? '置顶' : ''} ${t.importance === 'important' ? '重要' : ''} ${t.urgency === 'urgent' ? '紧急' : ''}`
+    const rangeLabel = timeRange === 'week' ? '过去7天' : timeRange === 'month' ? '过去30天' : '全部时间';
+
+    const taskList = filteredTasks.slice(0, 40).map(t =>
+      `- ${t.title} [${t.completed ? '完成' : '待办'}] 标签:${t.tag} ${t.deadline ? '截止:' + t.deadline : ''} ${t.importance === 'important' ? '重要' : ''} ${t.urgency === 'urgent' ? '紧急' : ''}`
     ).join('\n');
 
-    return `你是一位高效工作顾问。请分析用户的任务数据，给出工作总结和优化建议。
+    return `你是一位高效工作顾问。请分析用户${rangeLabel}的任务数据，生成一份专业的工作报告和建议。
 
-数据概览：
-- 总任务数：${tasks.length}
+数据概览（${rangeLabel}）：
+- 任务总数：${filteredTasks.length}
 - 已完成：${completed.length}
 - 待完成：${pending.length}
-- 完成率：${tasks.length > 0 ? Math.round((completed.length / tasks.length) * 100) : 0}%
+- 完成率：${filteredTasks.length > 0 ? Math.round((completed.length / filteredTasks.length) * 100) : 0}%
+- 完成番茄钟数：${totalPomodoros}
 - 平均任务时长：${avgDuration}分钟
 - 置顶待办：${pinnedPending}个
-- 设截止日的待办：${withDeadline}个
 - 已逾期：${overdue}个
 - 重要且紧急待办：${importantUrgent}个
 
 完成按标签分布：${JSON.stringify(completedByTag)}
 待办按标签分布：${JSON.stringify(pendingByTag)}
-完成按项目分布：${JSON.stringify(completedByProject)}
-待办按项目分布：${JSON.stringify(pendingByProject)}
 
-任务明细（前30个）：
+任务明细（前40个）：
 ${taskList}
 
 请以中文输出，格式如下（严格使用这些标题）：
 
 【工作概览】
-- 简要总结用户的工作状态和完成节奏
+- 简要总结用户的工作状态，${rangeLabel}的关键成果
 
 【完成亮点】
-- 2-3条用户做得好的方面
+- 2-3条做得好的方面
 
 【待改进点】
-- 2-3条用户工作效率上的不足
+- 2-3条工作效率上的不足
 
 【紧急关注】
-- 列出需要优先处理的任务（重要且紧急/已逾期）
+- 需要优先处理的任务
 
 【优化建议】
-- 5-7条具体可执行的行动建议，帮助用户提升效率
+- 5-7条具体可执行的行动建议
 
-【下一步行动】
-- 给出本周/今天应该优先做的3件事
+【${rangeLabel === '全部时间' ? '下一步行动' : '下个周期行动计划'}】
+- 给出下一步应该优先做的3件事
 
 请用简洁有力的语言，不要废话。`;
   };
@@ -109,14 +124,10 @@ ${taskList}
     try {
       const response = await fetch(`${API_BASE}/api/summary`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'deepseek-chat',
-          messages: [
-            { role: 'user', content: generatePrompt() },
-          ],
+          messages: [{ role: 'user', content: generatePrompt() }],
           temperature: 0.7,
         }),
       });
@@ -130,7 +141,6 @@ ${taskList}
       const content = data.choices?.[0]?.message?.content || '';
       setRawContent(content);
 
-      // Parse sections
       const parsed: SummarySection[] = [];
       const sectionMap: Record<string, { icon: React.ReactNode; color: string }> = {
         '工作概览': { icon: <TrendingUp size={14} />, color: 'text-sky-600 bg-sky-50' },
@@ -139,6 +149,7 @@ ${taskList}
         '紧急关注': { icon: <Target size={14} />, color: 'text-red-600 bg-red-50' },
         '优化建议': { icon: <Lightbulb size={14} />, color: 'text-purple-600 bg-purple-50' },
         '下一步行动': { icon: <Zap size={14} />, color: 'text-orange-600 bg-orange-50' },
+        '下个周期行动计划': { icon: <Zap size={14} />, color: 'text-orange-600 bg-orange-50' },
       };
 
       const regex = /【([^】]+)】([\s\S]*?)(?=【|$)/g;
@@ -171,7 +182,7 @@ ${taskList}
         <div className="flex items-center justify-between px-6 pt-5 pb-3 shrink-0">
           <div className="flex items-center gap-2">
             <Sparkles size={18} className="text-[var(--app-accent)]" />
-            <h3 className="text-base font-semibold text-[var(--app-text)]">AI 工作总结</h3>
+            <h3 className="text-base font-semibold text-[var(--app-text)]">AI 工作报告</h3>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--app-text-muted)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)] transition-all">
             <X size={16} />
@@ -179,16 +190,31 @@ ${taskList}
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 pb-5 space-y-4 min-h-0">
+          {/* Time range selector */}
+          {onTimeRangeChange && (
+            <div className="flex items-center gap-2 bg-[var(--app-surface)] rounded-lg border border-[var(--app-border)] p-0.5 w-fit">
+              {(['overall', 'week', 'month'] as const).map(range => (
+                <button
+                  key={range}
+                  onClick={() => onTimeRangeChange(range)}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                    timeRange === range
+                      ? 'bg-[var(--app-accent)] text-white'
+                      : 'text-[var(--app-text-secondary)] hover:text-[var(--app-text)]'
+                  )}
+                >
+                  <Calendar size={12} />
+                  {range === 'overall' ? '全部' : range === 'week' ? '本周' : '本月'}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Description */}
           <p className="text-[11px] text-[var(--app-text-muted)] leading-relaxed">
-            DeepSeek AI 将分析你所有已完成和待办的任务数据，找出工作模式，给出个性化的效率提升建议。
+            DeepSeek AI 将分析你在{timeRange === 'week' ? '过去7天' : timeRange === 'month' ? '过去30天' : '全部时间'}的任务数据，生成个性化报告。
           </p>
-
-          {/* Backend proxy status */}
-          <div className="flex items-center gap-1.5 text-[10px] text-[var(--app-text-muted)]">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            API Key 已安全存储在后端，前端不再暴露密钥
-          </div>
 
           {/* Analyze Button */}
           {sections.length === 0 && !loading && !error && (
@@ -197,14 +223,14 @@ ${taskList}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-medium bg-gradient-to-r from-[var(--app-accent)] to-[#c4a5a0] text-white hover:brightness-110 shadow-sm transition-all"
             >
               <Sparkles size={14} />
-              开始分析我的工作数据
+              开始分析
             </button>
           )}
 
           {loading && (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Loader2 size={24} className="animate-spin text-[var(--app-accent)]" />
-              <p className="text-xs text-[var(--app-text-muted)]">DeepSeek 正在分析你的工作数据...</p>
+              <p className="text-xs text-[var(--app-text-muted)]">DeepSeek 正在生成报告...</p>
             </div>
           )}
 

@@ -139,7 +139,7 @@ export function PerspectivesPanel({
             </div>
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-[#d4857a] text-white hover:bg-[#c97a6e] transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-[var(--app-accent)] text-white hover:bg-[var(--app-accent-hover)] transition-all"
             >
               <Plus size={14} />
               新建透视
@@ -200,7 +200,7 @@ export function PerspectivesPanel({
                       value={newName}
                       onChange={e => setNewName(e.target.value)}
                       placeholder="例如：本周重要工作"
-                      className="w-full text-sm bg-[var(--app-input-bg)] rounded-lg px-3 py-2.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[#d4857a] transition-colors"
+                      className="w-full text-sm bg-[var(--app-input-bg)] rounded-lg px-3 py-2.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)] transition-colors"
                     />
                   </div>
                   <div>
@@ -213,7 +213,7 @@ export function PerspectivesPanel({
                           className={cn(
                             'flex-1 py-2 rounded-lg text-xs font-medium transition-all border',
                             newFilters.completed === opt.v
-                              ? 'bg-[#d4857a] text-white border-[#d4857a]'
+                              ? 'bg-[var(--app-accent)] text-white border-[var(--app-accent)]'
                               : 'bg-[var(--app-surface)] text-[var(--app-text-secondary)] border-[var(--app-border)] hover:text-[var(--app-text)]'
                           )}
                         >
@@ -232,7 +232,7 @@ export function PerspectivesPanel({
                           className={cn(
                             'px-3 py-2 rounded-lg text-xs font-medium transition-all border',
                             newFilters.dateRange === opt.v
-                              ? 'bg-[#d4857a] text-white border-[#d4857a]'
+                              ? 'bg-[var(--app-accent)] text-white border-[var(--app-accent)]'
                               : 'bg-[var(--app-surface)] text-[var(--app-text-secondary)] border-[var(--app-border)] hover:text-[var(--app-text)]'
                           )}
                         >
@@ -304,7 +304,7 @@ export function PerspectivesPanel({
                     disabled={!newName.trim()}
                     className={cn(
                       'flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-medium transition-all',
-                      newName.trim() ? 'bg-[#d4857a] text-white hover:bg-[#c97a6e]' : 'bg-[var(--app-border)] text-[var(--app-text-placeholder)] cursor-not-allowed'
+                      newName.trim() ? 'bg-[var(--app-accent)] text-white hover:bg-[var(--app-accent-hover)]' : 'bg-[var(--app-border)] text-[var(--app-text-placeholder)] cursor-not-allowed'
                     )}
                   >
                     <Check size={14} />
@@ -428,7 +428,7 @@ function TaskNode({
             'mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 shrink-0',
             task.completed
               ? 'bg-[#8cc68a] border-[#8cc68a]'
-              : 'border-[var(--app-border)] hover:border-[#d4857a]'
+              : 'border-[var(--app-border)] hover:border-[var(--app-accent)]'
           )}
         >
           {task.completed && <Check size={12} className="text-white" />}

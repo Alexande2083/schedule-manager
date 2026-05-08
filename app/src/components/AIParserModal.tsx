@@ -169,6 +169,42 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
     setEditDraft(null);
   };
 
+  const [chatMode, setChatMode] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
+
+  const handleChat = async () => {
+    if (!chatInput.trim() || chatLoading) return;
+    const userMsg = chatInput.trim();
+    setChatInput('');
+    setChatMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setChatLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/summary`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: '你是一个日程助手。帮助用户管理任务、创建任务、查询状态。回答简洁直接。当前没有任务上下文信息，请直接回答用户的问题或帮用户规划。' },
+            { role: 'user', content: userMsg },
+          ],
+          temperature: 0.7,
+        }),
+      });
+      if (!response.ok) throw new Error(`请求失败 ${response.status}`);
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '抱歉，我没有理解你的意思。';
+      setChatMessages(prev => [...prev, { role: 'ai', content }]);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : '未知错误';
+      setChatMessages(prev => [...prev, { role: 'ai', content: `抱歉，连接 AI 服务失败（${errMsg}）。请检查网络连接或稍后再试。` }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -180,8 +216,8 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-3 shrink-0">
           <div className="flex items-center gap-2">
-            <Sparkles size={18} className="text-[#d4857a]" />
-            <h3 className="text-base font-semibold text-[var(--app-text)]">AI 智能解析</h3>
+            <Sparkles size={18} className="text-[var(--app-accent)]" />
+            <h3 className="text-base font-semibold text-[var(--app-text)]">AI 智能助手</h3>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--app-text-muted)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)] transition-all">
             <X size={16} />
@@ -189,9 +225,85 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 pb-5 space-y-4 min-h-0">
-          <p className="text-[11px] text-[var(--app-text-muted)] leading-relaxed">
-            粘贴上级通知、会议纪要或工作安排，DeepSeek AI 自动提取任务事项，一键导入日程。
-          </p>
+          {/* Mode tabs */}
+          <div className="flex items-center gap-1 bg-[var(--app-surface)] rounded-lg border border-[var(--app-border)] p-0.5">
+            <button
+              onClick={() => setChatMode(false)}
+              className={cn(
+                'flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                !chatMode ? 'bg-[var(--app-accent)] text-white' : 'text-[var(--app-text-secondary)] hover:text-[var(--app-text)]'
+              )}
+            >
+              解析文本
+            </button>
+            <button
+              onClick={() => setChatMode(true)}
+              className={cn(
+                'flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                chatMode ? 'bg-[var(--app-accent)] text-white' : 'text-[var(--app-text-secondary)] hover:text-[var(--app-text)]'
+              )}
+            >
+              对话模式
+            </button>
+          </div>
+
+          {chatMode ? (
+            /* Chat Mode */
+            <div className="flex flex-col h-[400px]">
+              <div className="flex-1 overflow-y-auto space-y-3 mb-3 min-h-0">
+                {chatMessages.length === 0 && (
+                  <div className="text-center py-8">
+                    <Sparkles size={32} className="mx-auto mb-2 text-[var(--app-text-muted)] opacity-30" />
+                    <p className="text-xs text-[var(--app-text-muted)]">问我任何关于日程管理的问题</p>
+                    <p className="text-[10px] text-[var(--app-text-muted)] mt-1">例如「帮我安排明天的工作」「创建个任务叫写周报」</p>
+                  </div>
+                )}
+                {chatMessages.map((msg, idx) => (
+                  <div key={idx} className={cn(
+                    'flex gap-2',
+                    msg.role === 'user' ? 'justify-end' : 'justify-start'
+                  )}>
+                    <div className={cn(
+                      'max-w-[80%] px-3 py-2 rounded-xl text-xs leading-relaxed',
+                      msg.role === 'user'
+                        ? 'bg-[var(--app-accent)] text-white'
+                        : 'bg-[var(--app-surface-hover)] border border-[var(--app-border)] text-[var(--app-text)]'
+                    )}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {chatLoading && (
+                  <div className="flex justify-start">
+                    <div className="px-3 py-2 rounded-xl bg-[var(--app-surface-hover)] border border-[var(--app-border)]">
+                      <Loader2 size={14} className="animate-spin text-[var(--app-accent)]" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleChat())}
+                  placeholder="输入你的问题..."
+                  className="flex-1 text-xs bg-[var(--app-input-bg)] rounded-lg px-3 py-2.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)] transition-colors"
+                />
+                <button
+                  onClick={handleChat}
+                  disabled={chatLoading || !chatInput.trim()}
+                  className="px-3 py-2 rounded-lg text-xs font-medium bg-[var(--app-accent)] text-white hover:brightness-110 transition-all disabled:opacity-50"
+                >
+                  {chatLoading ? <Loader2 size={14} className="animate-spin" /> : '发送'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Parse Mode */
+            <>
+              <p className="text-[11px] text-[var(--app-text-muted)] leading-relaxed">
+                粘贴上级通知、会议纪要或工作安排，DeepSeek AI 自动提取任务事项，一键导入日程。
+              </p>
 
           {/* Notification Text Input */}
           <div>
@@ -200,7 +312,7 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
               value={notificationText}
               onChange={(e) => setNotificationText(e.target.value)}
               placeholder="请粘贴通知内容，例如：\n各位同事，本周工作安排如下：\n1. 周三上午9点召开产品设计评审会议，预计1小时\n2. 周五前完成Q2季度报告初稿\n3. 下周一与客户进行需求对接..."
-              className="w-full h-32 text-xs bg-[var(--app-input-bg)] rounded-lg px-3 py-2.5 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[#d4857a] transition-colors resize-none leading-relaxed"
+              className="w-full h-32 text-xs bg-[var(--app-input-bg)] rounded-lg px-3 py-2.5 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[var(--app-accent)] transition-colors resize-none leading-relaxed"
             />
           </div>
 
@@ -213,7 +325,7 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
               loading
                 ? 'bg-[var(--app-border)] text-[var(--app-text-muted)] cursor-not-allowed'
                 : notificationText.trim()
-                  ? 'bg-gradient-to-r from-[#d4857a] to-[#d4a08a] text-white hover:brightness-110 shadow-sm'
+                  ? 'bg-gradient-to-r from-[var(--app-accent)] to-[var(--app-accent)] text-white hover:brightness-110 shadow-sm'
                   : 'bg-[var(--app-border)] text-[var(--app-text-placeholder)] cursor-not-allowed'
             )}
           >
@@ -245,13 +357,13 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setParsedTasks(prev => prev.map(t => ({ ...t, selected: true })))}
-                    className="text-[10px] text-[var(--app-text-muted)] hover:text-[#d4857a]"
+                    className="text-[10px] text-[var(--app-text-muted)] hover:text-[var(--app-accent)]"
                   >
                     全选
                   </button>
                   <button
                     onClick={() => setParsedTasks(prev => prev.map(t => ({ ...t, selected: false })))}
-                    className="text-[10px] text-[var(--app-text-muted)] hover:text-[#d4857a]"
+                    className="text-[10px] text-[var(--app-text-muted)] hover:text-[var(--app-accent)]"
                   >
                     全不选
                   </button>
@@ -265,7 +377,7 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
                     className={cn(
                       'flex items-start gap-2 p-2.5 rounded-lg border transition-all',
                       task.selected
-                        ? 'border-[#d4857a]/30 bg-[#d4857a]/5'
+                        ? 'border-[var(--app-accent)]/30 bg-[var(--app-accent)]/5'
                         : 'border-[var(--app-border)] bg-[var(--app-surface-hover)] opacity-60'
                     )}
                   >
@@ -273,7 +385,7 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
                       onClick={() => toggleTask(idx)}
                       className={cn(
                         'mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0',
-                        task.selected ? 'bg-[#d4857a] border-[#d4857a]' : 'border-[var(--app-border)]'
+                        task.selected ? 'bg-[var(--app-accent)] border-[var(--app-accent)]' : 'border-[var(--app-border)]'
                       )}
                     >
                       {task.selected && <Check size={10} className="text-white" />}
@@ -285,7 +397,7 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
                           <input
                             value={editDraft.title}
                             onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })}
-                            className="w-full text-xs bg-transparent outline-none border-b border-[#d4857a] text-[var(--app-text)]"
+                            className="w-full text-xs bg-transparent outline-none border-b border-[var(--app-accent)] text-[var(--app-text)]"
                           />
                           <div className="flex gap-1.5 flex-wrap">
                             <input
@@ -311,7 +423,7 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
                             </select>
                           </div>
                           <div className="flex gap-1.5">
-                            <button onClick={saveEdit} className="text-[10px] px-2 py-0.5 rounded bg-[#d4857a] text-white">保存</button>
+                            <button onClick={saveEdit} className="text-[10px] px-2 py-0.5 rounded bg-[var(--app-accent)] text-white">保存</button>
                             <button onClick={cancelEdit} className="text-[10px] px-2 py-0.5 rounded bg-[var(--app-border)] text-[var(--app-text-secondary)]">取消</button>
                           </div>
                         </div>
@@ -337,7 +449,7 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
 
                     {editingTask !== idx && (
                       <div className="flex gap-0.5">
-                        <button onClick={() => startEdit(idx)} className="p-1 rounded text-[var(--app-text-muted)] hover:text-[#d4857a]">
+                        <button onClick={() => startEdit(idx)} className="p-1 rounded text-[var(--app-text-muted)] hover:text-[var(--app-accent)]">
                           <Edit3 size={12} />
                         </button>
                         <button onClick={() => removeTask(idx)} className="p-1 rounded text-[var(--app-text-muted)] hover:text-red-500">
@@ -351,13 +463,15 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
 
               <button
                 onClick={handleAddAll}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[#d4857a] text-white hover:bg-[#c97a6e] transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-[var(--app-accent)] text-white hover:bg-[var(--app-accent-hover)] transition-colors"
               >
                 <Plus size={14} />
                 添加选中的 {parsedTasks.filter(t => t.selected).length} 个任务
               </button>
             </div>
           )}
+          </>
+        )}
         </div>
       </div>
     </div>
