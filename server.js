@@ -107,7 +107,7 @@ const SyncSchema = z.object({
     id: z.string().min(1).max(100),
     name: z.string().min(1).max(200),
     icon: z.string().max(50).optional(),
-    filters: z.record(z.any()).optional(),
+    filters: z.object({}).passthrough().optional(),
   })).optional(),
 });
 
