@@ -34,6 +34,7 @@ import { DailyReviewModal } from '@/components/DailyReviewModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { HabitsPanel } from '@/components/HabitsPanel';
 import { UserInsights } from '@/components/UserInsights';
+import { WeeklyAnalytics } from '@/components/WeeklyAnalytics';
 import { useHabits } from '@/hooks/useHabits';
 import { useLearningSystem } from '@/hooks/useLearningSystem';
 import type { ThemeColor } from '@/types';
@@ -583,9 +584,17 @@ function App() {
             </div>
           ) : view === 'insights' ? (
             <UserInsights insights={{ profile: learning.profile, timeSlotStats: learning.timeSlotStats, tagStats: learning.tagStats, weeklyTrend: learning.weeklyTrend, optimizationTips: learning.optimizationTips }} />
+          ) : view === 'week' ? (
+            <WeeklyAnalytics
+              tasks={contextFilteredTasks}
+              tags={tags}
+              learning={learning}
+              habits={habits}
+              onSelectDate={handleSelectDate}
+            />
           ) : (
             <Dashboard
-              tasks={contextFilteredTasks} selectedDate={selectedDate} view={view as 'today' | 'week'} displayMode={displayMode}
+              tasks={contextFilteredTasks} selectedDate={selectedDate} displayMode={displayMode}
               onChangeDisplayMode={handleChangeDisplayMode} filterTag={filterTag} onFilterTag={setFilterTag} onSelectDate={handleSelectDate}
               onToggleTask={handleToggleTask} onDeleteTask={handleDeleteTask} onEditTask={handleEditTask}
               onEditFullTask={handleEditFullTask} onAddTask={handleAddTask} onReorderTasks={handleReorderTasks}

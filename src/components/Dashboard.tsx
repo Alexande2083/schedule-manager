@@ -1,12 +1,12 @@
 import { useMemo, memo, useCallback, useState } from 'react';
 import {
-  CheckCircle2, Clock, Sparkles,
+  CheckCircle2, Clock,
   ChevronLeft, ChevronRight, List, BarChart3,
   Sun, Moon, Cloud, Zap, ArrowRight, Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Task, DisplayMode } from '@/types';
-import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { AddTaskInput } from './AddTaskInput';
 import { TaskItem } from './TaskItem';
 import { GanttChart } from './GanttChart';
@@ -22,7 +22,6 @@ import type { ScheduledTask, WeeklyPlanData } from '@/hooks/useLearningSystem';
 interface DashboardProps {
   tasks: Task[];
   selectedDate: string;
-  view: 'today' | 'week';
   displayMode: DisplayMode;
   onChangeDisplayMode: (mode: DisplayMode) => void;
   filterTag: string | null;
@@ -52,7 +51,7 @@ interface DashboardProps {
 }
 
 export const Dashboard = memo(function Dashboard({
-  tasks, selectedDate, view, displayMode, onChangeDisplayMode,
+  tasks, selectedDate, displayMode, onChangeDisplayMode,
   filterTag, onFilterTag, onSelectDate,
   onToggleTask, onDeleteTask, onEditTask,
   onAddTask, onOpenEdit,
@@ -60,7 +59,6 @@ export const Dashboard = memo(function Dashboard({
   onApplySchedule, onAddSubTasks, onUpdatePriority, onReschedule,
   onGenerateSchedule, onGeneratePlan, pendingTodayCount = 0,
 }: DashboardProps) {
-  const isTodayView = view === 'today';
 
   // DEBUG: static fallback — remove to re-enable useAutoPlanner
   const autoPlan = {
@@ -70,24 +68,13 @@ export const Dashboard = memo(function Dashboard({
   };
 
   const filteredTasks = useMemo(() => {
-    let filtered = tasks;
-    if (isTodayView) {
-      filtered = filtered.filter(t => t.date === selectedDate);
-    } else {
-      const now = new Date();
-      filtered = filtered.filter(t =>
-        isWithinInterval(parseISO(t.date), {
-          start: startOfWeek(now, { weekStartsOn: 1 }),
-          end: endOfWeek(now, { weekStartsOn: 1 }),
-        })
-      );
-    }
+    let filtered = tasks.filter(t => t.date === selectedDate);
     if (filterTag) filtered = filtered.filter(t => t.tag === filterTag);
     return [...filtered].sort((a, b) => {
       if (a.completed !== b.completed) return a.completed ? 1 : -1;
       return a.order - b.order;
     });
-  }, [tasks, selectedDate, view, filterTag]);
+  }, [tasks, selectedDate, filterTag]);
 
   const pendingTasks = filteredTasks.filter(t => !t.completed);
   const completedTasks = filteredTasks.filter(t => t.completed);
@@ -95,17 +82,15 @@ export const Dashboard = memo(function Dashboard({
     ? Math.round((completedTasks.length / filteredTasks.length) * 100) : 0;
 
   const handlePrevDay = () => {
-    if (!isTodayView) return;
     const d = parseISO(selectedDate); d.setDate(d.getDate() - 1);
     onSelectDate(format(d, 'yyyy-MM-dd'));
   };
   const handleNextDay = () => {
-    if (!isTodayView) return;
     const d = parseISO(selectedDate); d.setDate(d.getDate() + 1);
     onSelectDate(format(d, 'yyyy-MM-dd'));
   };
 
-  const showGantt = isTodayView && displayMode === 'gantt';
+  const showGantt = displayMode === 'gantt';
   const filteredIds = useMemo(() => new Set(filteredTasks.map(t => t.id)), [filteredTasks]);
   const rootTasks = useMemo(() =>
     filteredTasks.filter(t => !t.parentId || !filteredIds.has(t.parentId)),
@@ -166,19 +151,15 @@ export const Dashboard = memo(function Dashboard({
       {/* ── Page Title ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl">{isTodayView ? 'Today' : '本周概览'}</h1>
+          <h1 className="text-xl">Today</h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            {isTodayView
-              ? `${pendingTasks.length} pending · ${completedToday} completed · ${completionRate}% done`
-              : `${pendingTasks.length} pending`}
+            {pendingTasks.length} pending · {completedToday} completed · {completionRate}% done
           </p>
         </div>
-        {isTodayView && (
-          <div className="flex items-center gap-1">
-            <button onClick={handlePrevDay} className="btn-ghost"><ChevronLeft size={16} /></button>
-            <button onClick={handleNextDay} className="btn-ghost"><ChevronRight size={16} /></button>
-          </div>
-        )}
+        <div className="flex items-center gap-1">
+          <button onClick={handlePrevDay} className="btn-ghost"><ChevronLeft size={16} /></button>
+          <button onClick={handleNextDay} className="btn-ghost"><ChevronRight size={16} /></button>
+        </div>
       </div>
 
       {/* ── Row: Auto Planner + Time Blocks ── */}
@@ -186,25 +167,17 @@ export const Dashboard = memo(function Dashboard({
         {/* Auto Planner (Level 1) — Today only */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div className="p-6">
-            {isTodayView ? (
-              <DailyAutoPanel
-                plan={autoPlan}
-                onApplySchedule={onApplySchedule || (() => {})}
-                onAddSubTasks={onAddSubTasks || (() => {})}
-                onUpdatePriority={onUpdatePriority || (() => {})}
-                onReschedule={onReschedule || (() => {})}
-              />
-            ) : (
-              <div className="py-8 text-center">
-                <Sparkles size={28} className="mx-auto mb-2 text-[var(--color-text-muted)]" />
-                <p className="text-sm text-[var(--color-text-secondary)]">切换到 Today 视图查看自动规划</p>
-              </div>
-            )}
+            <DailyAutoPanel
+              plan={autoPlan}
+              onApplySchedule={onApplySchedule || (() => {})}
+              onAddSubTasks={onAddSubTasks || (() => {})}
+              onUpdatePriority={onUpdatePriority || (() => {})}
+              onReschedule={onReschedule || (() => {})}
+            />
           </div>
 
-          {/* ── Inline Smart Scheduler + Weekly Plan (Today only) ── */}
-          {isTodayView && (
-            <div className="border-t border-[var(--color-border)] px-6 py-4 space-y-3">
+          {/* ── Inline Smart Scheduler + Weekly Plan ── */}
+          <div className="border-t border-[var(--color-border)] px-6 py-4 space-y-3">
               {/* Scheduler */}
               <div className="rounded-card border border-[var(--color-border)] p-4"
                 style={{ background: 'var(--color-bg-raised)' }}>
@@ -291,7 +264,6 @@ export const Dashboard = memo(function Dashboard({
                 )}
               </div>
             </div>
-          )}
         </div>
 
         {/* Time Blocks + Weather + Calendar (Level 2) */}
@@ -373,8 +345,7 @@ export const Dashboard = memo(function Dashboard({
             <p className="text-xs text-[var(--color-text-muted)]">{pendingTasks.length} pending · {completedTasks.length} completed</p>
           </div>
           <div className="flex items-center gap-2">
-            {isTodayView && (
-              <div className="flex items-center bg-[var(--color-bg)] rounded-btn border border-[var(--color-border)] p-0.5">
+            <div className="flex items-center bg-[var(--color-bg)] rounded-btn border border-[var(--color-border)] p-0.5">
                 <button onClick={() => onChangeDisplayMode('list')}
                   className={cn('px-3 py-1.5 rounded-btn text-xs font-medium transition-colors duration-fast',
                     displayMode === 'list' ? 'bg-[var(--color-brand)] text-white' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]')}>
@@ -386,7 +357,6 @@ export const Dashboard = memo(function Dashboard({
                   <BarChart3 size={12} className="inline mr-1" />甘特图
                 </button>
               </div>
-            )}
           </div>
         </div>
 
@@ -419,7 +389,7 @@ export const Dashboard = memo(function Dashboard({
           <div className="py-12 text-center">
             <CheckCircle2 size={32} className="mx-auto mb-3 text-[var(--color-text-muted)]" />
             <p className="text-sm text-[var(--color-text-secondary)]">暂无任务</p>
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">{isTodayView ? '在上方输入框添加今天的任务' : '本周暂无任务'}</p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">在上方输入框添加今天的任务</p>
           </div>
         ) : (
           <div className="space-y-1">
