@@ -165,15 +165,21 @@ const NotificationConfigSchema = z.object({
 // Zod validation middleware factory
 function validate(schema) {
   return (req, res, next) => {
-    const result = schema.safeParse(req.body);
-    if (!result.success) {
-      return res.status(400).json({
-        error: '请求参数校验失败',
-        details: result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`),
-      });
+    try {
+      const result = schema.safeParse(req.body);
+      if (!result.success) {
+        const issues = result.error?.issues || [];
+        return res.status(400).json({
+          error: '请求参数校验失败',
+          details: issues.map(i => `${i.path.join('.')}: ${i.message}`),
+        });
+      }
+      req.body = result.data;
+      next();
+    } catch (err) {
+      console.error('❌ validate 中间件错误:', err.message);
+      return res.status(500).json({ error: '参数校验异常: ' + err.message });
     }
-    req.body = result.data;
-    next();
   };
 }
 
@@ -234,14 +240,15 @@ app.get('/api/sync', (req, res) => {
 });
 
 app.post('/api/sync', validate(SyncSchema), (req, res) => {
-  try {
-    const db = getDb();
-    if (!db) {
-      return res.status(500).json({ error: '数据库未初始化，请稍后重试' });
-    }
-    const uid = DEFAULT_USER_ID;
-    const { tasks, projects, checklists, tags, contexts, perspectives } = req.body;
+  const db = getDb();
+  if (!db) {
+    return res.status(500).json({ error: '数据库未初始化，请稍后重试' });
+  }
+  const uid = DEFAULT_USER_ID;
+  const { tasks, projects, checklists, tags, contexts, perspectives } = req.body;
+  const stmts = [];
 
+  try {
     // Delete old data
     db.run(`DELETE FROM tasks WHERE user_id = ?`, [uid]);
     db.run(`DELETE FROM projects WHERE user_id = ?`, [uid]);
@@ -251,44 +258,53 @@ app.post('/api/sync', validate(SyncSchema), (req, res) => {
     db.run(`DELETE FROM perspectives WHERE user_id = ?`, [uid]);
 
     // Insert new data
-    if (tasks) {
+    if (tasks && tasks.length > 0) {
       const stmt = db.prepare(`INSERT INTO tasks (id, user_id, title, completed, date, tag, time, duration, projectId, pomodoros, createdAt, "order", importance, urgency, deadline, "repeat", pinned, reminder, completedAt, checklistId, parentId, collapsed, contexts, notes, repeatRule, dependsOn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+      stmts.push(stmt);
       tasks.forEach(t => {
         stmt.run([t.id, uid, t.title, t.completed ? 1 : 0, t.date || '', t.tag || 'work', t.time || '', t.duration || 0, t.projectId || '', t.pomodoros || 0, t.createdAt || Date.now(), t.order || 0, t.importance || 'normal', t.urgency || 'normal', t.deadline || '', t.repeat || 'none', t.pinned ? 1 : 0, t.reminder || '', t.completedAt || null, t.checklistId || '', t.parentId || '', t.collapsed ? 1 : 0, JSON.stringify(t.contexts || []), t.notes || '', t.repeatRule || '', JSON.stringify(t.dependsOn || [])]);
       });
     }
 
-    if (projects) {
+    if (projects && projects.length > 0) {
       const stmt = db.prepare(`INSERT INTO projects (id, user_id, name, color) VALUES (?, ?, ?, ?)`);
+      stmts.push(stmt);
       projects.forEach(p => stmt.run([p.id, uid, p.name, p.color || '#8bb4d6']));
     }
 
-    if (checklists) {
+    if (checklists && checklists.length > 0) {
       const stmt = db.prepare(`INSERT INTO checklists (id, user_id, name, defaultTag, "order", archived) VALUES (?, ?, ?, ?, ?, ?)`);
+      stmts.push(stmt);
       checklists.forEach(c => stmt.run([c.id, uid, c.name, c.defaultTag || 'work', c.order || 0, c.archived ? 1 : 0]));
     }
 
-    if (tags) {
+    if (tags && tags.length > 0) {
       const stmt = db.prepare(`INSERT INTO tags (id, user_id, label, color) VALUES (?, ?, ?, ?)`);
+      stmts.push(stmt);
       tags.forEach(t => stmt.run([t.id, uid, t.label, t.color || '#8bb4d6']));
     }
 
-    if (contexts) {
+    if (contexts && contexts.length > 0) {
       const stmt = db.prepare(`INSERT INTO contexts (id, user_id, label, icon, color) VALUES (?, ?, ?, ?, ?)`);
+      stmts.push(stmt);
       contexts.forEach(c => stmt.run([c.id, uid, c.label, c.icon || 'Circle', c.color || '#8bb4d6']));
     }
 
-    if (perspectives) {
+    if (perspectives && perspectives.length > 0) {
       const stmt = db.prepare(`INSERT INTO perspectives (id, user_id, name, icon, filters) VALUES (?, ?, ?, ?, ?)`);
+      stmts.push(stmt);
       perspectives.forEach(p => stmt.run([p.id, uid, p.name, p.icon || 'Filter', JSON.stringify(p.filters || {})]));
     }
 
     saveDb();
-    res.json({ success: true, count: { tasks: tasks?.length || 0, projects: projects?.length || 0 } });
+    res.json({ success: true, count: { tasks: tasks?.length || 0, projects: projects?.length || 0, checklists: checklists?.length || 0, tags: tags?.length || 0, contexts: contexts?.length || 0, perspectives: perspectives?.length || 0 } });
   } catch (err) {
     console.error('❌ POST /api/sync 错误:', err.message);
+    console.error('   Stack:', err.stack?.split('\n').slice(0,3).join(' | '));
     console.error('   请求体大小:', JSON.stringify(req.body).length, 'bytes');
     res.status(500).json({ error: '服务器内部错误: ' + err.message });
+  } finally {
+    stmts.forEach(s => { try { s.free(); } catch {} });
   }
 });
 
@@ -624,7 +640,11 @@ app.post('/api/mindmap/expand', validate(MindMapExpandSchema), async (req, res) 
 
 // ─── Global Error Handler ─────────────────────────────────
 app.use((err, _req, res, _next) => {
-  console.error('Unhandled error:', err);
+  console.error('❌ 未处理错误:');
+  console.error('   消息:', err?.message || err);
+  console.error('   堆栈:', err?.stack?.split('\n').slice(0, 4).join(' | '));
+  console.error('   请求路径:', _req?.method, _req?.url);
+  console.error('   请求体:', JSON.stringify(_req?.body)?.slice(0, 500));
   res.status(500).json({ error: '服务器内部错误，请稍后重试' });
 });
 
