@@ -107,6 +107,16 @@ export async function webdavTest(config: WebDAVConfig): Promise<{ ok: boolean; m
 }
 
 /**
+ * 默认 WebDAV 配置（硬编码，避免每次手动输入）
+ */
+const DEFAULT_WEBDAV_CONFIG: WebDAVConfig = {
+  url: 'https://dav.jianguoyun.com/dav/',
+  username: 'duanxiaohong2082@gmail.com',
+  password: 'arp4548vfud4himm',
+  filename: 'sunsama-sync.json',
+};
+
+/**
  * 保存配置到 localStorage
  */
 export function saveWebDAVConfig(config: WebDAVConfig) {
@@ -114,14 +124,17 @@ export function saveWebDAVConfig(config: WebDAVConfig) {
 }
 
 /**
- * 从 localStorage 读取配置
+ * 从 localStorage 读取配置，若无则返回默认配置
  */
-export function loadWebDAVConfig(): WebDAVConfig | null {
+export function loadWebDAVConfig(): WebDAVConfig {
   const raw = localStorage.getItem('sunsama-webdav-config');
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch { return null; }
+  if (raw) {
+    try {
+      return JSON.parse(raw);
+    } catch { /* ignore */ }
+  }
+  // 返回硬编码的默认配置
+  return { ...DEFAULT_WEBDAV_CONFIG };
 }
 
 /**
