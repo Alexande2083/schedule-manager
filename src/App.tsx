@@ -125,16 +125,18 @@ function App() {
         const data = JSON.parse(json);
         if (data.tasks && Array.isArray(data.tasks)) {
           if (window.confirm('检测到同步链接，是否恢复其中的数据？当前数据将被覆盖。')) {
-            localStorage.setItem('sunsama-tasks', JSON.stringify(data.tasks));
-            if (data.tags) localStorage.setItem('sunsama-tags', JSON.stringify(data.tags));
-            if (data.projects) localStorage.setItem('sunsama-projects', JSON.stringify(data.projects));
-            if (data.checklists) localStorage.setItem('sunsama-checklists', JSON.stringify(data.checklists));
-            if (data.contexts) localStorage.setItem('sunsama-contexts', JSON.stringify(data.contexts));
-            if (data.perspectives) localStorage.setItem('sunsama-perspectives', JSON.stringify(data.perspectives));
-            if (data.theme) localStorage.setItem('sunsama-theme', JSON.stringify(data.theme));
-            if (data.selectedDate) localStorage.setItem('sunsama-selected-date', JSON.stringify(data.selectedDate));
-            window.location.hash = '';
-            window.location.reload();
+            // Prevent pullFromServer from overwriting the just-imported data on reload
+          localStorage.setItem('sunsama-skip-pull', 'true');
+          if (data.tasks) localStorage.setItem('sunsama-tasks', JSON.stringify(data.tasks));
+          if (data.tags) localStorage.setItem('sunsama-tags', JSON.stringify(data.tags));
+          if (data.projects) localStorage.setItem('sunsama-projects', JSON.stringify(data.projects));
+          if (data.checklists) localStorage.setItem('sunsama-checklists', JSON.stringify(data.checklists));
+          if (data.contexts) localStorage.setItem('sunsama-contexts', JSON.stringify(data.contexts));
+          if (data.perspectives) localStorage.setItem('sunsama-perspectives', JSON.stringify(data.perspectives));
+          if (data.theme) localStorage.setItem('sunsama-theme-v2', JSON.stringify(data.theme));
+          if (data.selectedDate) localStorage.setItem('sunsama-selected-date', JSON.stringify(data.selectedDate));
+          window.location.hash = '';
+          setTimeout(() => window.location.reload(), 800);
           } else {
             window.location.hash = '';
           }
@@ -653,7 +655,10 @@ function App() {
             dependsOn: (t.dependsOn || []).map((depId: string) => taskMap[depId] || depId),
           }));
 
-          // Write to localStorage directly for immediate persistence
+          // Step 1: Set skip-pull flag FIRST (before any async operations)
+          localStorage.setItem('sunsama-skip-pull', 'true');
+
+          // Step 2: Write all data to localStorage synchronously (this is the source of truth)
           localStorage.setItem('sunsama-tasks', JSON.stringify(remappedTasks));
           if (data.tags) localStorage.setItem('sunsama-tags', JSON.stringify(data.tags));
           if (data.projects) localStorage.setItem('sunsama-projects', JSON.stringify(newProjects));
@@ -663,7 +668,7 @@ function App() {
           if (data.theme) localStorage.setItem('sunsama-theme-v2', JSON.stringify(data.theme));
           if (data.selectedDate) localStorage.setItem('sunsama-selected-date', JSON.stringify(data.selectedDate));
 
-          // Update React state (will also persist via useLocalStorage useEffect)
+          // Step 3: Update React state (for immediate UI feedback)
           setTasks(remappedTasks);
           if (data.tags) setTags(data.tags);
           if (data.projects) setProjects(newProjects);
@@ -672,26 +677,20 @@ function App() {
           if (data.perspectives) setPerspectives(newPerspectives);
           if (data.theme) setTheme(data.theme as AppTheme);
 
-          // Push to server in background (non-blocking)
-          try {
-            await syncPut({
-              tasks: remappedTasks,
-              projects: newProjects,
-              checklists: newChecklists,
-              tags: Object.entries(data.tags || {}).map(([key, val]) => ({
-                id: `tag_${key}`, label: val.label, color: val.color,
-              })),
-              contexts: newContexts,
-              perspectives: newPerspectives,
-            });
-          } catch (e) {
-            console.warn('导入数据同步到服务器失败，将基于本地数据恢复:', e);
-          }
+          // Step 4: Push to server in background (non-blocking, errors are warnings only)
+          syncPut({
+            tasks: remappedTasks,
+            projects: newProjects,
+            checklists: newChecklists,
+            tags: Object.entries(data.tags || {}).map(([key, val]) => ({
+              id: `tag_${key}`, label: val.label, color: val.color,
+            })),
+            contexts: newContexts,
+            perspectives: newPerspectives,
+          }).catch((e) => console.warn('导入数据同步到服务器失败，将基于本地数据恢复:', e));
 
-          // Prevent pullFromServer from overwriting the just-imported data on reload
-          localStorage.setItem('sunsama-skip-pull', 'true');
-          // Delay reload to let React flush state to localStorage
-          setTimeout(() => window.location.reload(), 500);
+          // Step 5: Reload after data is written — localStorage has everything needed for recovery
+          setTimeout(() => window.location.reload(), 800);
         }}
       />
 

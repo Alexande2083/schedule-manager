@@ -492,7 +492,13 @@ app.post('/api/webdav/push', async (req, res) => {
     if (response.ok || response.status === 201 || response.status === 204) {
       res.json({ success: true });
     } else {
-      res.status(response.status).json({ error: `推送失败: ${response.status}` });
+      const bodyText = await response.text().catch(() => '');
+      // 如果返回的是 HTML（通常是代理/防火墙错误），返回更友好的提示
+      const isHtmlResponse = bodyText.trim().startsWith('<');
+      const message = isHtmlResponse
+        ? `坚果云服务器返回错误 ${response.status}，可能网络不通或账号信息有误`
+        : `推送失败: ${response.status} ${bodyText.slice(0, 100)}`;
+      res.status(response.status).json({ error: message });
     }
   } catch (err) {
     res.status(500).json({ error: err.message || '推送失败' });

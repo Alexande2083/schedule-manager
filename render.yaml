@@ -8,3 +8,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 20
+      # ⚠️ 请在 Render Dashboard → schedule-manager → Environment → Add Environment Variable
+      # 添加 SYNC_SECRET，值必须与客户端「云端同步密钥」输入框中填写的密钥完全一致
+      # 例如设置为 Alexkey（同时在客户端输入相同的 Alexkey）
+      - key: SYNC_SECRET
+        value: "CHANGE_ME_IN_RENDER_DASHBOARD"
