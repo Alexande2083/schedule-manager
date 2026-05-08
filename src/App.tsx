@@ -48,7 +48,7 @@ interface AppTheme {
 
 function App() {
   const [theme, setTheme] = useLocalStorage<AppTheme>('sunsama-theme-v2', { colorScheme: 'coral', isDark: false });
-  const [glassOpacity, setGlassOpacity] = useLocalStorage<number>('sunsama-glass-opacity', 55);
+  const [glassOpacity] = useLocalStorage<number>('sunsama-glass-opacity', 55);
   const fontSize = useFontSize();
   const taskTemplates = useTaskTemplates();
   const [tags, setTags] = useLocalStorage<Record<string, { label: string; color: string }>>('sunsama-tags', DEFAULT_TAGS);
@@ -504,14 +504,19 @@ function App() {
           />
         </header>
 
-        {/* Desktop Toolbar (>=768px) */}
-        <div className="hidden md:flex flex-shrink-0 items-center justify-end gap-2 px-6 py-3 border-b border-[var(--color-border)]">
-          <button onClick={() => setAiParserOpen(true)} className="btn-ghost text-xs">✨ AI 解析</button>
-          <button onClick={() => setSearchOpen(true)} className="btn-ghost text-xs">🔍 搜索</button>
-        </div>
-
         {/* Scrollable Content */}
         <main className={`flex-1 ${view !== 'mindmap' ? 'overflow-y-auto' : ''}`}>
+          {/* Inline toolbar for Today/Week/Checklist only */}
+          {['today', 'week', 'checklist'].includes(view) && (
+            <div className="flex items-center justify-end gap-2 px-6 pt-3">
+              <button onClick={() => setAiParserOpen(true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-[var(--color-brand)] transition-all">
+                ✨ AI 解析
+              </button>
+              <button onClick={() => setSearchOpen(true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-[var(--color-brand)] transition-all">
+                🔍 搜索
+              </button>
+            </div>
+          )}
           {view === 'checklist' ? (
             <div className="p-6">
               <ChecklistPanel
@@ -693,8 +698,6 @@ function App() {
         onUpdateTags={setTags}
         fontSize={fontSize.size}
         onChangeFontSize={fontSize.setSize}
-        glassOpacity={glassOpacity}
-        onChangeGlassOpacity={setGlassOpacity}
       />
 
       {/* Mobile Edit Drawer (replaces modal on mobile) */}

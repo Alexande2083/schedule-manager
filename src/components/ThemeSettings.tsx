@@ -5,9 +5,8 @@ import type { FontSize } from '@/hooks/useFontSize';
 import { cn } from '@/lib/utils';
 
 const PRESET_COLORS = [
-  '#d4857a', '#e0b87a', '#7ec9a8', '#9db3d4', '#b8a0d4',
-  '#f0a0a0', '#a0d4e0', '#d4a0c0', '#a0c4d4', '#c4d4a0',
-  '#e8a87c', '#7cb8e8', '#e87cb8', '#b8e87c', '#e8c47c',
+  '#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#06b6d4', '#ec4899', '#f97316', '#84cc16', '#14b8a6',
 ];
 
 interface ThemeSettingsProps {
@@ -21,8 +20,6 @@ interface ThemeSettingsProps {
   onUpdateTags?: (tags: Record<string, { label: string; color: string }>) => void;
   fontSize?: FontSize;
   onChangeFontSize?: (size: FontSize) => void;
-  glassOpacity?: number;
-  onChangeGlassOpacity?: (opacity: number) => void;
 }
 
 interface ThemeOption {
@@ -47,7 +44,6 @@ export function ThemeSettings({
   isOpen, onClose, colorScheme, onChangeColorScheme, isDark, onToggleDark,
   tags = {}, onUpdateTags,
   fontSize = 'medium', onChangeFontSize,
-  glassOpacity = 55, onChangeGlassOpacity,
 }: ThemeSettingsProps) {
   const [activeTab, setActiveTab] = useState<'theme' | 'tags'>('theme');
   const [newTagLabel, setNewTagLabel] = useState('');
@@ -153,27 +149,6 @@ export function ThemeSettings({
                 </div>
               </div>
 
-              {/* Glass opacity */}
-              <div>
-                <h4 className="text-sm font-medium text-[var(--app-text)] mb-3 flex items-center gap-2">
-                  <Palette size={14} />
-                  毛玻璃透明度
-                </h4>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min={10}
-                    max={95}
-                    value={glassOpacity}
-                    onChange={(e) => onChangeGlassOpacity?.(Number(e.target.value))}
-                    className="flex-1 h-1.5 bg-[var(--app-border)] rounded-full appearance-none cursor-pointer accent-[var(--app-accent)]"
-                  />
-                  <span className="text-xs font-medium text-[var(--app-text-secondary)] w-10 text-right">
-                    {glassOpacity}%
-                  </span>
-                </div>
-              </div>
-
               {/* Dark mode toggle */}
               <div>
                 <h4 className="text-sm font-medium text-[var(--app-text)] mb-3">显示模式</h4>
@@ -253,14 +228,14 @@ export function ThemeSettings({
                       <span className="text-xs font-medium text-[var(--app-text)] flex-1">{tag.label}</span>
 
                       {/* Color picker */}
-                      <div className="flex gap-1 flex-wrap">
+                      <div className="flex gap-1.5 flex-wrap items-center">
                         {PRESET_COLORS.map(c => (
                           <button
                             key={c}
                             onClick={() => handleColorChange(key, c)}
                             className={cn(
-                              'w-5 h-5 rounded-full transition-all',
-                              tag.color === c ? 'ring-2 ring-offset-1 ring-[var(--app-text)]' : 'hover:scale-110'
+                              'w-6 h-6 rounded-full transition-all',
+                              tag.color === c ? 'ring-2 ring-offset-1 ring-[var(--app-text)] scale-110' : 'hover:scale-110'
                             )}
                             style={{ backgroundColor: c }}
                           />
@@ -297,7 +272,7 @@ export function ThemeSettings({
                   <button
                     onClick={handleAddTag}
                     disabled={!newTagKey.trim() || !newTagLabel.trim()}
-                    className="px-3 py-1.5 rounded-lg bg-[var(--app-accent)] text-white text-xs font-medium hover:bg-[var(--app-accent-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-[var(--app-accent)] text-white text-xs font-medium hover:bg-[var(--app-accent-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus size={14} />
                   </button>

@@ -61,6 +61,21 @@ export function CalendarPanel({ tasks, selectedDate, onSelectDate, tags = {} }: 
 
   return (
     <div style={{ padding: 'var(--space-3)' }}>
+      {/* Today date + lunar at top-left */}
+      {(() => {
+        const todayLunar = getLunarInfo(selectedDateObj);
+        return (
+          <div className="mb-3">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-base font-bold text-[var(--app-text)]">{format(selectedDateObj, 'M月d日')}</span>
+              <span className="text-[10px] text-[var(--app-text-muted)]">{format(selectedDateObj, 'EEEE')}</span>
+            </div>
+            <span className="text-[10px] text-[var(--app-text-muted)]">
+              {todayLunar.term ? `🌿 ${todayLunar.term}` : `农历${todayLunar.dayStr}`}
+            </span>
+          </div>
+        );
+      })()}
       {/* Month header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5">

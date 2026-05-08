@@ -199,8 +199,8 @@ export function ChecklistPanel({
       )}
 
       {/* Checklist columns */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0">
-        <div className="flex gap-3 h-full pb-2" style={{ minWidth: `${activeChecklists.length * 280}px` }}>
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex flex-col md:flex-row gap-3 pb-2">
           {activeChecklists.map(checklist => {
             const listTasks = tasksByList[checklist.id] || [];
             const tagInfo = tags[checklist.defaultTag] || { label: checklist.defaultTag, color: '#9ca3af' };
@@ -209,7 +209,7 @@ export function ChecklistPanel({
             return (
               <div
                 key={checklist.id}
-                className="w-[270px] shrink-0 flex flex-col bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] shadow-sm"
+                className="w-full md:w-[270px] shrink-0 flex flex-col bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] shadow-sm"
               >
                 {/* Column header */}
                 <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--app-border)]">

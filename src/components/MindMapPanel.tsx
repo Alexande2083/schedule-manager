@@ -45,7 +45,11 @@ interface Position { x: number; y: number; }
 const STORAGE_KEY = 'mindmap-v2-data';
 
 const THEMES = {
-  dark:  { bg: '#0f1117', rootGradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)', lineColor: '#6366f1', nodeBg: '#1a1b23', nodeBorder: '#2a2b36', nodeText: '#e4e5e7', accent: '#6366f1' },
+  light:   { bg: '#ffffff', rootGradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)', lineColor: '#6366f1', nodeBg: '#ffffff', nodeBorder: '#e2e8f0', nodeText: '#1e293b', accent: '#6366f1' },
+  ocean:   { bg: '#f0f5fa', rootGradient: 'linear-gradient(135deg, #0ea5e9, #06b6d4)', lineColor: '#0ea5e9', nodeBg: '#ffffff', nodeBorder: '#bae6fd', nodeText: '#0c4a6e', accent: '#0ea5e9' },
+  forest:  { bg: '#f2f7f0', rootGradient: 'linear-gradient(135deg, #22c55e, #10b981)', lineColor: '#22c55e', nodeBg: '#ffffff', nodeBorder: '#bbf7d0', nodeText: '#14532d', accent: '#22c55e' },
+  sunset:  { bg: '#fef7f0', rootGradient: 'linear-gradient(135deg, #f97316, #ef4444)', lineColor: '#f97316', nodeBg: '#ffffff', nodeBorder: '#fed7aa', nodeText: '#7c2d12', accent: '#f97316' },
+  purple:  { bg: '#faf5ff', rootGradient: 'linear-gradient(135deg, #a855f7, #d946ef)', lineColor: '#a855f7', nodeBg: '#ffffff', nodeBorder: '#e9d5ff', nodeText: '#4c1d95', accent: '#a855f7' },
 };
 
 // ─── Type visual config ───
@@ -153,11 +157,12 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
   const [taskTag, setTaskTag] = useState('work');
   const [showDetail, setShowDetail] = useState(false);
   const [attachUrl, setAttachUrl] = useState('');
+  const [themeKey, setThemeKey] = useState<keyof typeof THEMES>('light');
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const theme = THEMES.dark;
+  const theme = THEMES[themeKey as keyof typeof THEMES] || THEMES.light;
 
   // Save
   useEffect(() => { saveData(data); }, [data]);
@@ -375,11 +380,9 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
   const handleMouseUp = useCallback(() => { setIsDragging(false); }, []);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -0.05 : 0.05;
-      setScale(s => Math.round(Math.max(0.2, Math.min(2.5, s + delta)) * 100) / 100);
-    }
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.05 : 0.05;
+    setScale(s => Math.round(Math.max(0.2, Math.min(2.5, s + delta)) * 100) / 100);
   }, []);
 
   const zoomIn = () => setScale(s => Math.min(s + 0.1, 2.5));
@@ -435,7 +438,7 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
       if (!node) return;
       const isRoot = id === data.rootId;
       const typeCfg = TYPE_CONFIG[node.type];
-      ctx.fillStyle = isRoot ? theme.accent : '#1a1b23';
+      ctx.fillStyle = isRoot ? theme.accent : theme.nodeBg;
       ctx.strokeStyle = isRoot ? theme.accent : typeCfg.border;
       ctx.lineWidth = isRoot ? 0 : 1.5;
       ctx.beginPath();
@@ -472,6 +475,17 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
             </p>
           </div>
           <div className="flex items-center gap-1">
+            {/* Theme dots */}
+            {(Object.keys(THEMES) as Array<keyof typeof THEMES>).map((k) => (
+              <button
+                key={k}
+                onClick={() => setThemeKey(k)}
+                className={themeKey === k ? 'w-5 h-5 rounded-full border-2 border-[var(--app-accent)] scale-110' : 'w-5 h-5 rounded-full border border-[var(--app-border)] opacity-60 hover:opacity-100'}
+                style={{ background: THEMES[k].rootGradient }}
+                title={k}
+              />
+            ))}
+            <div className="w-px h-5 bg-[var(--app-border)] mx-1" />
             <button onClick={zoomIn} className="p-1.5 rounded-lg hover:bg-[var(--app-surface-hover)] text-[var(--app-text-muted)] hover:text-[var(--app-text)]" title="放大"><ZoomIn size={16} /></button>
             <span className="text-[11px] text-[var(--app-text-muted)] tabular-nums w-10 text-center">{Math.round(scale * 100)}%</span>
             <button onClick={zoomOut} className="p-1.5 rounded-lg hover:bg-[var(--app-surface-hover)] text-[var(--app-text-muted)] hover:text-[var(--app-text)]" title="缩小"><ZoomOut size={16} /></button>
@@ -532,12 +546,10 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
                     </button>
                   )}
 
-                  {/* AI loading skeleton */}
+                  {/* AI loading spinner */}
                   {isLoading && (
-                    <div className="absolute top-full left-0 mt-2 ml-4 flex flex-col gap-1.5 z-30">
-                      {[1, 2, 3].map(i => (
-                        <div key={i} className="h-7 rounded-lg animate-pulse" style={{ width: 80 + i * 20, background: 'rgba(99,102,241,0.15)' }} />
-                      ))}
+                    <div className="absolute -right-8 top-1/2 -translate-y-1/2 z-30">
+                      <div className="w-5 h-5 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
                     </div>
                   )}
 
