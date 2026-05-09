@@ -130,8 +130,8 @@ export function WeatherTimeWidget() {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, '本地'),
-        (_err) => {
-          // 无论用户拒绝、超时还是定位不可用，都回退到北京
+        () => {
+          setLocationDenied(true);
           fetchWeather(39.9042, 116.4074, '北京');
         },
         { timeout: 8000, enableHighAccuracy: false }
@@ -144,8 +144,19 @@ export function WeatherTimeWidget() {
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
-    // 默认加载北京天气，不自动弹出定位权限申请
-    fetchWeather(39.9042, 116.4074, '北京');
+    // 启动时尝试定位，用户拒绝则回退到北京
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, '本地'),
+        () => {
+          setLocationDenied(true);
+          fetchWeather(39.9042, 116.4074, '北京');
+        },
+        { timeout: 8000, enableHighAccuracy: false }
+      );
+    } else {
+      fetchWeather(39.9042, 116.4074, '北京');
+    }
   }, [fetchWeather]);
 
   const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
