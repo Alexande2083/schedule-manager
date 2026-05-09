@@ -189,7 +189,7 @@ function Section({
                     isActive ? "bg-[var(--color-brand-ghost)] text-[var(--color-brand)]" : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text)]"
                   )}
                 >
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                   <span className="truncate">{item.label}</span>
                 </button>
                 {onDelete && (

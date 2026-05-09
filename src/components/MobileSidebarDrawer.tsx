@@ -143,7 +143,7 @@ export function MobileSidebarDrawer({ isOpen, onClose }: MobileSidebarDrawerProp
                     : 'text-[var(--app-text-secondary)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)]'
                 )}
               >
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
                 <span className="text-xs truncate">{p.name}</span>
               </button>
             ))}
@@ -172,7 +172,7 @@ export function MobileSidebarDrawer({ isOpen, onClose }: MobileSidebarDrawerProp
                     : 'text-[var(--app-text-secondary)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)]'
                 )}
               >
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: tag.color }} />
                 <span className="text-xs">{tag.label}</span>
               </button>
             ))}
@@ -201,7 +201,7 @@ export function MobileSidebarDrawer({ isOpen, onClose }: MobileSidebarDrawerProp
                     : 'text-[var(--app-text-secondary)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)]'
                 )}
               >
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ctx.color }} />
+                <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: ctx.color }} />
                 <span className="text-xs">{ctx.label}</span>
               </button>
             ))}

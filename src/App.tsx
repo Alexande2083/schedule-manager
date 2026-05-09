@@ -37,6 +37,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MobileEditDrawer } from '@/components/MobileEditDrawer';
 import { DailyReviewModal } from '@/components/DailyReviewModal';
 import { SettingsModal } from '@/components/SettingsModal';
+import { SyncFAB } from '@/components/SyncFAB';
 import { HabitsPanel } from '@/components/HabitsPanel';
 import { UserInsights } from '@/components/UserInsights';
 import { WeeklyAnalytics } from '@/components/WeeklyAnalytics';
@@ -371,6 +372,9 @@ function App() {
         onStart={pomodoro.start} onPause={pomodoro.pause} onReset={pomodoro.reset}
         onSetDuration={pomodoro.setDuration}
        />
+
+      {/* Floating WebDAV sync button */}
+      <SyncFAB />
     </div>
     </ErrorBoundary>
   );
