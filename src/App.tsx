@@ -24,7 +24,6 @@ import { MobileRightPanelSheet } from '@/components/MobileRightPanelSheet';
 import { DataSyncPanel } from '@/components/DataSyncPanel';
 import { AIParserModal } from '@/components/AIParserModal';
 import { AISummaryModal } from '@/components/AISummaryModal';
-import { MindMapPanel } from '@/components/MindMapPanel';
 import { ReviewPanel } from '@/components/ReviewPanel';
 import { ChecklistPanel } from '@/components/ChecklistPanel';
 import { PerspectivesPanel } from '@/components/PerspectivesPanel';
@@ -217,7 +216,7 @@ function App() {
         </header>
 
         {/* Content */}
-        <main className={`flex-1 ${view !== 'mindmap' ? 'overflow-y-auto' : ''}`}>
+        <main className="flex-1 overflow-y-auto">
           {['today', 'week', 'checklist'].includes(view) && (
             <div className="flex items-center justify-end gap-2 px-6 pt-3">
               <button onClick={() => setAiParserOpen(true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-[var(--color-brand)] transition-all">
@@ -232,8 +231,6 @@ function App() {
             <div className="p-6">
               <ChecklistPanel onOpenEdit={setEditingTask} onExportArchive={handleExportArchive} />
             </div>
-          ) : view === 'mindmap' ? (
-            <MindMapPanel />
           ) : view === 'review' ? (
             <div className="p-6">
               <ReviewPanel />

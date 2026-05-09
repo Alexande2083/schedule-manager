@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard, CalendarDays, ListChecks, TreePine, Eye, View,
+  LayoutDashboard, CalendarDays, ListChecks, Eye, View,
   Flame, Brain,
   FolderKanban, Tag, MapPin, ChevronDown, ChevronRight,
   Plus, X, Settings,
@@ -12,7 +12,6 @@ const NAV_ITEMS = [
   { id: 'today', label: 'Today', icon: LayoutDashboard },
   { id: 'week', label: '本周', icon: CalendarDays },
   { id: 'checklist', label: '清单', icon: ListChecks },
-  { id: 'mindmap', label: '导图', icon: TreePine },
   { id: 'perspectives', label: '透视', icon: Eye },
   { id: 'habits', label: '习惯', icon: Flame },
   { id: 'insights', label: '洞察', icon: Brain },
