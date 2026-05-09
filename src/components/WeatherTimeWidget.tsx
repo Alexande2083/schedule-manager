@@ -144,19 +144,39 @@ export function WeatherTimeWidget() {
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
-    // 启动时尝试定位，用户拒绝则回退到北京
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, '本地'),
-        () => {
-          setLocationDenied(true);
-          fetchWeather(39.9042, 116.4074, '北京');
-        },
-        { timeout: 8000, enableHighAccuracy: false }
-      );
-    } else {
+
+    const fallbackToBeijing = () => {
       fetchWeather(39.9042, 116.4074, '北京');
-    }
+    };
+
+    // 1. 先尝试 IP 定位（不需要权限，适用于 HTTP/HTTPS）
+    fetch('https://ipapi.co/json/')
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        const lat = data.latitude;
+        const lon = data.longitude;
+        const city = data.city || '本地';
+        if (lat && lon) {
+          fetchWeather(lat, lon, city);
+          return;
+        }
+        throw new Error('no coordinates');
+      })
+      .catch(() => {
+        // 2. IP 定位失败，尝试浏览器 Geolocation API
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => fetchWeather(pos.coords.latitude, pos.coords.longitude, '本地'),
+            () => {
+              setLocationDenied(true);
+              fallbackToBeijing();
+            },
+            { timeout: 6000, enableHighAccuracy: false }
+          );
+        } else {
+          fallbackToBeijing();
+        }
+      });
   }, [fetchWeather]);
 
   const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
