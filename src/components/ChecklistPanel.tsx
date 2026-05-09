@@ -6,22 +6,12 @@ import {
 } from 'lucide-react';
 import { format, parseISO, isToday, isPast, differenceInDays } from 'date-fns';
 import type { Task, Checklist } from '@/types';
+import { useAppStore } from '@/store';
 import { getToday } from '@/utils/date';
 import { cn } from '@/lib/utils';
 
 interface ChecklistPanelProps {
-  tasks: Task[];
-  checklists: Checklist[];
-  tags: Record<string, { label: string; color: string }>;
-  onAddTask: (task: Omit<Task, 'id' | 'createdAt' | 'order'>) => void;
-  onToggleTask: (id: string) => void;
-  onDeleteTask: (id: string) => void;
-  onEditTask: (id: string, title: string) => void;
-  onTogglePin: (id: string) => void;
-  onSetReminder: (id: string, reminder: string | undefined) => void;
   onOpenEdit: (task: Task) => void;
-  onUpdateChecklists: (checklists: Checklist[]) => void;
-  onReorderTasks: (tasks: Task[]) => void;
   onExportArchive: () => void;
 }
 
@@ -37,10 +27,17 @@ function getDeadlineLabel(deadline: string) {
 }
 
 export function ChecklistPanel({
-  tasks, checklists, tags, onAddTask, onToggleTask, onDeleteTask,
-  onTogglePin, onOpenEdit, onUpdateChecklists,
-  onReorderTasks, onExportArchive,
+  onOpenEdit, onExportArchive,
 }: ChecklistPanelProps) {
+  const tasks = useAppStore(s => s.tasks);
+  const checklists = useAppStore(s => s.checklists);
+  const tags = useAppStore(s => s.tags);
+  const addTask = useAppStore(s => s.addTask);
+  const toggleTask = useAppStore(s => s.toggleTask);
+  const deleteTask = useAppStore(s => s.deleteTask);
+  const togglePin = useAppStore(s => s.togglePin);
+  const setChecklists = useAppStore(s => s.setChecklists);
+  const reorderTasksStore = useAppStore(s => s.reorderTasks);
   const [newTaskInputs, setNewTaskInputs] = useState<Record<string, string>>({});
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [showAddList, setShowAddList] = useState(false);
@@ -60,7 +57,7 @@ export function ChecklistPanel({
   const handleAddToList = (checklistId: string, checklistTag: string) => {
     const text = newTaskInputs[checklistId]?.trim();
     if (!text) return;
-    onAddTask({
+    addTask({
       title: text,
       completed: false,
       date: getToday(),
@@ -109,7 +106,7 @@ export function ChecklistPanel({
     const reordered = newList.map((t, idx) => ({ ...t, order: minOrder + idx }));
     // Replace in full tasks
     const fullTasks = tasks.map(t => reordered.find(rt => rt.id === t.id) || t);
-    onReorderTasks(fullTasks);
+    reorderTasksStore(fullTasks);
     setDraggedId(null);
   };
 
@@ -123,18 +120,18 @@ export function ChecklistPanel({
       order: checklists.length,
       archived: false,
     };
-    onUpdateChecklists([...checklists, newList]);
+    setChecklists([...checklists, newList]);
     setNewListName('');
     setShowAddList(false);
   };
 
   const handleDeleteList = (id: string) => {
     if (!window.confirm('删除此清单？清单内的任务不会被删除。')) return;
-    onUpdateChecklists(checklists.filter(c => c.id !== id));
+    setChecklists(checklists.filter(c => c.id !== id));
   };
 
   const handleArchiveList = (id: string) => {
-    onUpdateChecklists(checklists.map(c => c.id === id ? { ...c, archived: true } : c));
+    setChecklists(checklists.map(c => c.id === id ? { ...c, archived: true } : c));
   };
 
   const activeChecklists = useMemo(() => checklists.filter(c => !c.archived), [checklists]);
@@ -254,7 +251,7 @@ export function ChecklistPanel({
                       >
                         {/* Checkbox */}
                         <button
-                          onClick={() => onToggleTask(task.id)}
+                          onClick={() => toggleTask(task.id)}
                           className={cn(
                             'mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0',
                             task.completed ? 'bg-[var(--app-success)] border-[var(--app-success)]' : 'border-[var(--app-border)] hover:border-[var(--app-accent)]'
@@ -292,14 +289,14 @@ export function ChecklistPanel({
                         {/* Actions */}
                         <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
-                            onClick={() => onTogglePin(task.id)}
+                            onClick={() => togglePin(task.id)}
                             className={cn('p-0.5 rounded', task.pinned ? 'text-[var(--app-accent)]' : 'text-[var(--app-text-muted)] hover:text-[var(--app-accent)]')}
                             title={task.pinned ? '取消置顶' : '置顶'}
                           >
                             {task.pinned ? <Pin size={11} /> : <PinOff size={11} />}
                           </button>
                           <button
-                            onClick={() => onDeleteTask(task.id)}
+                            onClick={() => deleteTask(task.id)}
                             className="p-0.5 rounded text-[var(--app-text-muted)] hover:text-red-500"
                           >
                             <Trash2 size={11} />

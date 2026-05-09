@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, Sparkles, Loader2, Plus, Check, AlertTriangle, Trash2, Edit3 } from 'lucide-react';
-import type { Task } from '@/types';
+import { useAppStore } from '@/store';
 import { getToday } from '@/utils/date';
 import { cn } from '@/lib/utils';
 
@@ -10,8 +10,6 @@ const API_BASE = '';
 interface AIParserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddTasks: (tasks: Omit<Task, 'id' | 'createdAt' | 'order'>[]) => void;
-  tags: Record<string, { label: string; color: string }>;
 }
 
 interface ParsedTask {
@@ -54,7 +52,9 @@ const SYSTEM_PROMPT = `你是一个任务提取助手。请分析用户粘贴的
   ]
 }`;
 
-export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserModalProps) {
+export function AIParserModal({ isOpen, onClose }: AIParserModalProps) {
+  const tags = useAppStore(s => s.tags);
+  const addParsedTasks = useAppStore(s => s.addParsedTasks);
   const [notificationText, setNotificationText] = useState('');
   const [parsedTasks, setParsedTasks] = useState<ParsedTask[]>([]);
   const [loading, setLoading] = useState(false);
@@ -124,7 +124,7 @@ export function AIParserModal({ isOpen, onClose, onAddTasks, tags }: AIParserMod
   const handleAddAll = () => {
     const selected = parsedTasks.filter(t => t.selected);
     if (selected.length === 0) { setError('请至少选择一个任务'); return; }
-    onAddTasks(selected.map(t => ({
+    addParsedTasks(selected.map(t => ({
       title: t.title,
       completed: false,
       date: t.date,

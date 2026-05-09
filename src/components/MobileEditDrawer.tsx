@@ -3,8 +3,9 @@ import {
   X, Flag, AlertTriangle,
   Monitor, Smartphone, Building2, Car, Users, Home,
 } from 'lucide-react';
-import type { Task, Project, Context } from '@/types';
+import type { Task } from '@/types';
 import { cn } from '@/lib/utils';
+import { useAppStore } from '@/store';
 
 const CONTEXT_ICONS: Record<string, React.ElementType> = {
   Monitor, Smartphone, Building2, Car, Users, Home,
@@ -25,13 +26,14 @@ interface MobileEditDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   task: Task | null;
-  tags: Record<string, { label: string; color: string }>;
-  projects: Project[];
-  contexts?: Context[];
-  onSave: (id: string, updates: Partial<Task>) => void;
 }
 
-export function MobileEditDrawer({ isOpen, onClose, task, tags, projects, contexts, onSave }: MobileEditDrawerProps) {
+export function MobileEditDrawer({ isOpen, onClose, task }: MobileEditDrawerProps) {
+  const tags = useAppStore(s => s.tags);
+  const projects = useAppStore(s => s.projects);
+  const contexts = useAppStore(s => s.contexts);
+  const editFullTask = useAppStore(s => s.editFullTask);
+
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -69,7 +71,7 @@ export function MobileEditDrawer({ isOpen, onClose, task, tags, projects, contex
 
   const handleSave = () => {
     if (!task || !title.trim()) return;
-    onSave(task.id, {
+    editFullTask(task.id, {
       title: title.trim(),
       date,
       time: time || undefined,
@@ -86,7 +88,7 @@ export function MobileEditDrawer({ isOpen, onClose, task, tags, projects, contex
 
   const handleSaveAndComplete = () => {
     if (!task || !title.trim()) return;
-    onSave(task.id, {
+    editFullTask(task.id, {
       title: title.trim(),
       date,
       time: time || undefined,

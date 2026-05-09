@@ -6,7 +6,7 @@ import {
   Monitor, Smartphone, Building2, Car, Users, Home
 } from 'lucide-react';
 import type { Task, Perspective, Context, Project } from '@/types';
-import type { TagConfig } from '@/types';
+import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -14,22 +14,17 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Monitor, Smartphone, Building2, Car, Users, Home, Eye,
 };
 
-interface PerspectivesPanelProps {
-  tasks: Task[];
-  perspectives: Perspective[];
-  contexts: Context[];
-  tags: Record<string, TagConfig>;
-  projects: Project[];
-  onToggleTask: (id: string) => void;
-  onDeleteTask: (id: string) => void;
-  onEditFullTask: (id: string, updates: Partial<Task>) => void;
-  onUpdatePerspectives: (perspectives: Perspective[]) => void;
-}
+interface PerspectivesPanelProps {}
 
-export function PerspectivesPanel({
-  tasks, perspectives, contexts, tags, projects,
-  onToggleTask, onDeleteTask, onEditFullTask, onUpdatePerspectives,
-}: PerspectivesPanelProps) {
+export function PerspectivesPanel({}: PerspectivesPanelProps) {
+  const tasks = useAppStore(s => s.tasks);
+  const perspectives = useAppStore(s => s.perspectives);
+  const contexts = useAppStore(s => s.contexts);
+  const tags = useAppStore(s => s.tags);
+  const projects = useAppStore(s => s.projects);
+  const toggleTask = useAppStore(s => s.toggleTask);
+  const deleteTask = useAppStore(s => s.deleteTask);
+  const setPerspectives = useAppStore(s => s.setPerspectives);
   const [activePerspectiveId, setActivePerspectiveId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [collapsedTasks, setCollapsedTasks] = useState<Set<string>>(new Set());
@@ -100,7 +95,7 @@ export function PerspectivesPanel({
 
   const handleDeletePerspective = (id: string) => {
     if (window.confirm('确定删除此透视？')) {
-      onUpdatePerspectives(perspectives.filter(p => p.id !== id));
+      setPerspectives(perspectives.filter(p => p.id !== id));
       if (activePerspectiveId === id) setActivePerspectiveId(null);
     }
   };
@@ -113,7 +108,7 @@ export function PerspectivesPanel({
       icon: 'Eye',
       filters: { ...newFilters },
     };
-    onUpdatePerspectives([...perspectives, newPerspective]);
+    setPerspectives([...perspectives, newPerspective]);
     setNewName('');
     setNewFilters({ completed: false, dateRange: 'all' });
     setShowCreate(false);
@@ -346,15 +341,8 @@ export function PerspectivesPanel({
                 <TaskNode
                   key={task.id}
                   task={task}
-                  tasks={filteredTasks}
-                  contexts={contexts}
-                  tags={tags}
-                  projects={projects}
                   collapsedTasks={collapsedTasks}
                   onToggleCollapsed={toggleCollapsed}
-                  onToggleTask={onToggleTask}
-                  onDeleteTask={onDeleteTask}
-                  onEditFullTask={onEditFullTask}
                   getChildTasks={getChildTasks}
                   getDeadlineBadge={getDeadlineBadge}
                   level={0}
@@ -371,25 +359,22 @@ export function PerspectivesPanel({
 /* Recursive Task Node */
 interface TaskNodeProps {
   task: Task;
-  tasks: Task[];
-  contexts: Context[];
-  tags: Record<string, TagConfig>;
-  projects: Project[];
   collapsedTasks: Set<string>;
   onToggleCollapsed: (id: string) => void;
-  onToggleTask: (id: string) => void;
-  onDeleteTask: (id: string) => void;
-  onEditFullTask: (id: string, updates: Partial<Task>) => void;
   getChildTasks: (parentId: string) => Task[];
   getDeadlineBadge: (task: Task) => { text: string; class: string } | null;
   level: number;
 }
 
 function TaskNode({
-  task, tasks, contexts, tags, projects, collapsedTasks,
-  onToggleCollapsed, onToggleTask, onDeleteTask, onEditFullTask,
-  getChildTasks, getDeadlineBadge, level,
+  task, collapsedTasks,
+  onToggleCollapsed, getChildTasks, getDeadlineBadge, level,
 }: TaskNodeProps) {
+  const contexts = useAppStore(s => s.contexts);
+  const tags = useAppStore(s => s.tags);
+  const projects = useAppStore(s => s.projects);
+  const toggleTask = useAppStore(s => s.toggleTask);
+  const deleteTask = useAppStore(s => s.deleteTask);
   const children = getChildTasks(task.id);
   const hasChildren = children.length > 0;
   const isCollapsed = collapsedTasks.has(task.id);
@@ -423,7 +408,7 @@ function TaskNode({
 
         {/* Checkbox */}
         <button
-          onClick={() => onToggleTask(task.id)}
+          onClick={() => toggleTask(task.id)}
           className={cn(
             'mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 shrink-0',
             task.completed
@@ -484,7 +469,7 @@ function TaskNode({
 
         {/* Actions */}
         <button
-          onClick={() => { if (window.confirm('确定删除此任务？')) onDeleteTask(task.id); }}
+          onClick={() => { if (window.confirm('确定删除此任务？')) deleteTask(task.id); }}
           className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-[var(--app-text-muted)] hover:text-red-500 hover:bg-red-50 transition-all duration-200 shrink-0"
         >
           <Trash2 size={14} />
@@ -496,15 +481,8 @@ function TaskNode({
         <TaskNode
           key={child.id}
           task={child}
-          tasks={tasks}
-          contexts={contexts}
-          tags={tags}
-          projects={projects}
           collapsedTasks={collapsedTasks}
           onToggleCollapsed={onToggleCollapsed}
-          onToggleTask={onToggleTask}
-          onDeleteTask={onDeleteTask}
-          onEditFullTask={onEditFullTask}
           getChildTasks={getChildTasks}
           getDeadlineBadge={getDeadlineBadge}
           level={level + 1}

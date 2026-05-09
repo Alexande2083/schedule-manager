@@ -1,20 +1,22 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { X, Search, CalendarDays, FolderOpen } from 'lucide-react';
-import type { Task, Project, Context } from '@/types';
+import type { Task } from '@/types';
 import { cn } from '@/lib/utils';
+import { useAppStore } from '@/store';
 
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tasks: Task[];
-  projects: Project[];
-  contexts?: Context[];
-  tags: Record<string, { label: string; color: string }>;
   onOpenEdit: (task: Task) => void;
   onSelectDate: (date: string) => void;
 }
 
-export function SearchModal({ isOpen, onClose, tasks, projects, contexts, tags, onOpenEdit, onSelectDate }: SearchModalProps) {
+export function SearchModal({ isOpen, onClose, onOpenEdit, onSelectDate }: SearchModalProps) {
+  const tasks = useAppStore(s => s.tasks);
+  const projects = useAppStore(s => s.projects);
+  const tags = useAppStore(s => s.tags);
+  const contexts = useAppStore(s => s.contexts);
+
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 

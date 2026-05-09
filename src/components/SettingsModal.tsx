@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import type { ThemeColor } from '@/types';
 import type { FontSize } from '@/hooks/useFontSize';
+import { useAppStore } from '@/store';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -12,12 +13,6 @@ interface SettingsModalProps {
   onOpenSync: () => void;
   onOpenTheme: () => void;
   onExportArchive?: () => void;
-  colorScheme: ThemeColor;
-  isDark: boolean;
-  onChangeColorScheme: (scheme: ThemeColor) => void;
-  onToggleDark: () => void;
-  fontSize?: FontSize;
-  onChangeFontSize?: (size: FontSize) => void;
 }
 
 type Tab = 'data' | 'theme';
@@ -35,9 +30,13 @@ const COLOR_SCHEMES: { id: ThemeColor; name: string; color: string }[] = [
 
 export function SettingsModal({
   isOpen, onClose, onOpenSync, onOpenTheme,
-  onExportArchive, colorScheme, isDark, onChangeColorScheme, onToggleDark,
-  fontSize = 'medium', onChangeFontSize,
+  onExportArchive,
 }: SettingsModalProps) {
+  const colorScheme = useAppStore(s => s.theme.colorScheme);
+  const isDark = useAppStore(s => s.theme.isDark);
+  const setTheme = useAppStore(s => s.setTheme);
+  const fontSize = useAppStore(s => s.fontSize);
+  const setFontSize = useAppStore(s => s.setFontSize);
   const [tab, setTab] = useState<Tab>('data');
 
   if (!isOpen) return null;
@@ -101,7 +100,7 @@ export function SettingsModal({
                     { key: 'large' as FontSize, label: '大' },
                   ]).map(opt => (
                     <button key={opt.key}
-                      onClick={() => onChangeFontSize?.(opt.key)}
+                      onClick={() => setFontSize(opt.key)}
                       className="flex-1 px-3 py-2 rounded-btn text-xs font-medium border transition-all"
                       style={{
                         background: fontSize === opt.key ? 'var(--color-brand)' : 'var(--color-bg)',
@@ -119,7 +118,7 @@ export function SettingsModal({
                   {isDark ? <Moon size={16} style={{ color: 'var(--color-brand)' }} /> : <Sun size={16} style={{ color: 'var(--color-brand)' }} />}
                   <span className="text-sm" style={{ color: 'var(--color-text)' }}>深色模式</span>
                 </div>
-                <button onClick={onToggleDark}
+                <button onClick={() => setTheme(prev => ({ ...prev, isDark: !prev.isDark }))}
                   className="w-11 h-6 rounded-full transition-colors relative flex-shrink-0"
                   style={{ background: isDark ? 'var(--color-brand)' : 'var(--color-border)' }}>
                   <div className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform"
@@ -130,7 +129,7 @@ export function SettingsModal({
                 <p className="text-xs mb-3" style={{ color: 'var(--color-text-muted)' }}>配色方案</p>
                 <div className="grid grid-cols-4 gap-2">
                   {COLOR_SCHEMES.map(s => (
-                    <button key={s.id} onClick={() => onChangeColorScheme(s.id)}
+                    <button key={s.id} onClick={() => setTheme(prev => ({ ...prev, colorScheme: s.id }))}
                       className="flex flex-col items-center gap-1.5 p-2 rounded-btn transition-all"
                       style={{
                         background: colorScheme === s.id ? s.color + '18' : 'var(--color-bg)',

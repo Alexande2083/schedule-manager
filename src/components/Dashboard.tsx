@@ -18,47 +18,63 @@ import { CompletionStatsPanel } from './CompletionStatsPanel';
 import { HeatmapPanel } from './HeatmapPanel';
 import type { TaskTemplate } from '@/hooks/useTaskTemplates';
 import type { ScheduledTask, WeeklyPlanData } from '@/hooks/useLearningSystem';
+import { useAppStore } from '@/store';
 
 interface DashboardProps {
-  tasks: Task[];
-  selectedDate: string;
-  displayMode: DisplayMode;
-  onChangeDisplayMode: (mode: DisplayMode) => void;
-  filterTag: string | null;
-  onFilterTag?: (tag: string | null) => void;
-  onSelectDate: (date: string) => void;
-  onToggleTask: (id: string) => void;
-  onDeleteTask: (id: string) => void;
-  onEditTask: (id: string, title: string) => void;
-  onEditFullTask: (id: string, updates: Partial<Task>) => void;
-  onAddTask: (task: Omit<Task, 'id' | 'createdAt' | 'order'>) => void;
-  onReorderTasks: (tasks: Task[]) => void;
   onOpenEdit: (task: Task) => void;
   completedToday: number;
-  tags: Record<string, { label: string; color: string }>;
-  projects: import('@/types').Project[];
-  contexts?: import('@/types').Context[];
   templates?: TaskTemplate[];
-  onReorderProjects?: (projects: import('@/types').Project[]) => void;
-  onApplySchedule?: (updates: { id: string; time: string }[]) => void;
-  onAddSubTasks?: (parentId: string, steps: string[]) => void;
-  onUpdatePriority?: (id: string, importance: 'important' | 'normal', urgency: 'urgent' | 'normal') => void;
-  onReschedule?: (id: string, date: string) => void;
-  // Smart Scheduler & Weekly Plan (inline in dashboard)
   onGenerateSchedule?: (date: string) => ScheduledTask[];
   onGeneratePlan?: (goal: string) => WeeklyPlanData;
-  pendingTodayCount?: number;
+  pendingTodayCount: number;
 }
 
 export const Dashboard = memo(function Dashboard({
-  tasks, selectedDate, displayMode, onChangeDisplayMode,
-  filterTag, onFilterTag, onSelectDate,
-  onToggleTask, onDeleteTask, onEditTask,
-  onAddTask, onOpenEdit,
-  completedToday, tags, projects, contexts, templates, onReorderProjects,
-  onApplySchedule, onAddSubTasks, onUpdatePriority, onReschedule,
-  onGenerateSchedule, onGeneratePlan, pendingTodayCount = 0,
+  onOpenEdit, completedToday, templates,
+  onGenerateSchedule, onGeneratePlan, pendingTodayCount,
 }: DashboardProps) {
+  const allTasks = useAppStore(s => s.tasks);
+  const selectedDate = useAppStore(s => s.selectedDate);
+  const displayMode = useAppStore(s => s.displayMode);
+  const onChangeDisplayMode = useAppStore(s => s.setDisplayMode);
+  const filterTag = useAppStore(s => s.filterTag);
+  const onFilterTag = useAppStore(s => s.setFilterTag);
+  const onSelectDate = useAppStore(s => s.setSelectedDate);
+  const onToggleTask = useAppStore(s => s.toggleTask);
+  const onDeleteTask = useAppStore(s => s.deleteTask);
+  const onEditTask = useAppStore(s => s.editTask);
+  const onEditFullTask = useAppStore(s => s.editFullTask);
+  const onAddTask = useAppStore(s => s.addTask);
+  const onReorderTasks = useAppStore(s => s.reorderTasks);
+  const tags = useAppStore(s => s.tags);
+  const projects = useAppStore(s => s.projects);
+  const contexts = useAppStore(s => s.contexts);
+  const onReorderProjects = useAppStore(s => s.setProjects);
+  const onApplySchedule = useAppStore(s => s.applySchedule);
+  const onAddSubTasks = useAppStore(s => s.addSubTasks);
+  const onUpdatePriority = useAppStore(s => s.updatePriority);
+  const onReschedule = useAppStore(s => s.reschedule);
+
+  // Apply context + project filters (same logic as previous App.tsx)
+  const filterContext = useAppStore(s => s.filterContext);
+  const filterProject = useAppStore(s => s.filterProject);
+  const tasks = useMemo(() => {
+    let result = allTasks;
+    if (filterContext.length > 0) {
+      result = result.filter(t => {
+        if (t.contexts && t.contexts.some(c => filterContext.includes(c))) return true;
+        if (t.parentId) {
+          const parent = allTasks.find(pt => pt.id === t.parentId);
+          if (parent?.contexts && parent.contexts.some(c => filterContext.includes(c))) return true;
+        }
+        return false;
+      });
+    }
+    if (filterProject) {
+      result = result.filter(t => t.projectId === filterProject || (!t.projectId && filterProject === 'none'));
+    }
+    return result;
+  }, [allTasks, filterContext, filterProject]);
 
   // DEBUG: static fallback — remove to re-enable useAutoPlanner
   const autoPlan = {
@@ -169,10 +185,10 @@ export const Dashboard = memo(function Dashboard({
           <div className="p-6">
             <DailyAutoPanel
               plan={autoPlan}
-              onApplySchedule={onApplySchedule || (() => {})}
-              onAddSubTasks={onAddSubTasks || (() => {})}
-              onUpdatePriority={onUpdatePriority || (() => {})}
-              onReschedule={onReschedule || (() => {})}
+              onApplySchedule={onApplySchedule}
+              onAddSubTasks={onAddSubTasks}
+              onUpdatePriority={onUpdatePriority}
+              onReschedule={onReschedule}
             />
           </div>
 
@@ -364,7 +380,7 @@ export const Dashboard = memo(function Dashboard({
         {Object.keys(tags).length > 0 && (
           <div className="flex flex-wrap gap-1 mb-4">
             {Object.entries(tags).map(([key, tag]) => (
-              <button key={key} onClick={() => onFilterTag?.(filterTag === key ? null : key)}
+              <button key={key} onClick={() => onFilterTag(filterTag === key ? null : key)}
                 className={cn('badge transition-colors duration-fast',
                   filterTag === key ? 'text-white' : 'bg-[var(--color-bg)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]')}
                 style={filterTag === key ? { background: tag.color } : undefined}>
@@ -372,7 +388,7 @@ export const Dashboard = memo(function Dashboard({
               </button>
             ))}
             {filterTag && (
-              <button onClick={() => onFilterTag?.(null)} className="badge bg-[var(--color-bg)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+              <button onClick={() => onFilterTag(null)} className="badge bg-[var(--color-bg)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
                 × 清除
               </button>
             )}
@@ -384,7 +400,7 @@ export const Dashboard = memo(function Dashboard({
 
         {/* Task List */}
         {showGantt ? (
-          <GanttChart tasks={tasks} projects={projects} selectedDate={selectedDate} onOpenEdit={onOpenEdit || (() => {})} onReorderProjects={onReorderProjects} />
+          <GanttChart tasks={tasks} projects={projects} selectedDate={selectedDate} onOpenEdit={onOpenEdit} onReorderProjects={onReorderProjects} />
         ) : rootTasks.length === 0 ? (
           <div className="py-12 text-center">
             <CheckCircle2 size={32} className="mx-auto mb-3 text-[var(--color-text-muted)]" />
@@ -398,7 +414,7 @@ export const Dashboard = memo(function Dashboard({
                 <TaskItem
                   task={task} tags={tags} projects={projects} contexts={contexts} allTasks={filteredTasks}
                   onToggle={onToggleTask} onDelete={onDeleteTask} onEdit={onEditTask}
-                  onOpenEdit={onOpenEdit || (() => {})} getChildTasks={getChildTasks}
+                  onOpenEdit={onOpenEdit} getChildTasks={getChildTasks}
                 />
               </div>
             ))}

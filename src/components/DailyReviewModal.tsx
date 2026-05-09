@@ -1,21 +1,21 @@
 import { useState, useMemo } from 'react';
 import { X, CheckCircle2, Clock, Flame, Target, Zap, Star } from 'lucide-react';
-import type { Task } from '@/types';
+import { useAppStore } from '@/store';
 import { format, parseISO, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface DailyReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tasks: Task[];
   pomodoroCompletedToday: number;
-  date: string;
   onOpenReview?: () => void;
 }
 
 export function DailyReviewModal({
-  isOpen, onClose, tasks, pomodoroCompletedToday, date, onOpenReview,
+  isOpen, onClose, pomodoroCompletedToday, onOpenReview,
 }: DailyReviewModalProps) {
+  const tasks = useAppStore(s => s.tasks);
+  const date = useAppStore(s => s.selectedDate);
   const [note, setNote] = useState('');
 
   const stats = useMemo(() => {

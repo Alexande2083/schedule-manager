@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { X, Sparkles, Loader2, Lightbulb, TrendingUp, AlertCircle, CheckCircle2, Target, Zap, Calendar } from 'lucide-react';
-import type { Task } from '@/types';
+import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
 const API_BASE = '';
@@ -8,7 +8,6 @@ const API_BASE = '';
 interface AISummaryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tasks: Task[];
   /** Optional time range for weekly/monthly report */
   timeRange?: 'overall' | 'week' | 'month';
   onTimeRangeChange?: (range: 'overall' | 'week' | 'month') => void;
@@ -21,7 +20,8 @@ interface SummarySection {
   color: string;
 }
 
-export function AISummaryModal({ isOpen, onClose, tasks, timeRange = 'overall', onTimeRangeChange }: AISummaryModalProps) {
+export function AISummaryModal({ isOpen, onClose, timeRange = 'overall', onTimeRangeChange }: AISummaryModalProps) {
+  const tasks = useAppStore(s => s.tasks);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sections, setSections] = useState<SummarySection[]>([]);

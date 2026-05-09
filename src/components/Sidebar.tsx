@@ -6,7 +6,7 @@ import {
   FolderKanban, Tag, MapPin, ChevronDown, ChevronRight,
   Plus, X, Settings,
 } from 'lucide-react';
-import type { Project, Context } from '@/types';
+import { useAppStore } from '@/store';
 
 const NAV_ITEMS = [
   { id: 'today', label: 'Today', icon: LayoutDashboard },
@@ -20,29 +20,25 @@ const NAV_ITEMS = [
 ];
 
 interface SidebarProps {
-  view: string;
-  onChangeView: (view: string) => void;
   onOpenSettings?: () => void;
-  tags?: Record<string, { label: string; color: string }>;
-  filterTag?: string | null;
-  onFilterTag?: (tag: string | null) => void;
-  projects?: Project[];
-  filterProject?: string | null;
-  onFilterProject?: (project: string | null) => void;
-  contexts?: Context[];
-  filterContext?: string[];
-  onFilterContext?: (context: string[]) => void;
-  onUpdateProjects?: (projects: Project[]) => void;
-  onUpdateTags?: (tags: Record<string, { label: string; color: string }>) => void;
-  onUpdateContexts?: (contexts: Context[]) => void;
 }
 
-export function Sidebar({
-  view, onChangeView, onOpenSettings, tags = {}, filterTag, onFilterTag,
-  projects = [], filterProject, onFilterProject,
-  contexts = [], filterContext, onFilterContext,
-  onUpdateProjects, onUpdateTags, onUpdateContexts,
-}: SidebarProps) {
+export function Sidebar({ onOpenSettings }: SidebarProps) {
+  const view = useAppStore(s => s.view);
+  const onChangeView = useAppStore(s => s.setView);
+  const tags = useAppStore(s => s.tags);
+  const filterTag = useAppStore(s => s.filterTag);
+  const onFilterTag = useAppStore(s => s.setFilterTag);
+  const projects = useAppStore(s => s.projects);
+  const filterProject = useAppStore(s => s.filterProject);
+  const onFilterProject = useAppStore(s => s.setFilterProject);
+  const contexts = useAppStore(s => s.contexts);
+  const filterContext = useAppStore(s => s.filterContext);
+  const onFilterContext = useAppStore(s => s.setFilterContext);
+  const setProjects = useAppStore(s => s.setProjects);
+  const setTags = useAppStore(s => s.setTags);
+  const setContexts = useAppStore(s => s.setContexts);
+
   const [expandedProject, setExpandedProject] = useState(false);
   const [expandedTag, setExpandedTag] = useState(false);
   const [expandedContext, setExpandedContext] = useState(false);
@@ -90,11 +86,11 @@ export function Sidebar({
           onToggle={() => setExpandedProject(!expandedProject)}
           items={projects.map(p => ({ id: p.id, label: p.name, color: p.color }))}
           activeId={filterProject}
-          onSelect={onFilterProject ? (id) => onFilterProject(id === filterProject ? null : id) : undefined}
-          onDelete={onUpdateProjects ? (id) => onUpdateProjects(projects.filter(p => p.id !== id)) : undefined}
-          onAdd={onUpdateProjects ? (label) => {
-            onUpdateProjects([...projects, { id: crypto.randomUUID(), name: label, color: '#6366f1' }]);
-          } : undefined}
+          onSelect={(id) => onFilterProject(id === filterProject ? null : id)}
+          onDelete={(id) => setProjects(projects.filter(p => p.id !== id))}
+          onAdd={(label) => {
+            setProjects([...projects, { id: crypto.randomUUID(), name: label, color: '#6366f1' }]);
+          }}
           newItem={newItem}
           setNewItem={setNewItem}
         />
@@ -106,15 +102,15 @@ export function Sidebar({
           onToggle={() => setExpandedTag(!expandedTag)}
           items={Object.entries(tags).map(([k, v]) => ({ id: k, label: v.label, color: v.color }))}
           activeId={filterTag}
-          onSelect={onFilterTag ? (id) => onFilterTag(id === filterTag ? null : id) : undefined}
-          onDelete={onUpdateTags ? (id) => {
-            const next = { ...tags }; delete next[id]; onUpdateTags(next);
-          } : undefined}
-          onAdd={onUpdateTags ? (label) => {
+          onSelect={(id) => onFilterTag(id === filterTag ? null : id)}
+          onDelete={(id) => {
+            const next = { ...tags }; delete next[id]; setTags(next);
+          }}
+          onAdd={(label) => {
             const key = label.toLowerCase().replace(/\s+/g, '-');
             const colors = ['#6366f1','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4'];
-            onUpdateTags({ ...tags, [key]: { label, color: colors[Object.keys(tags).length % colors.length] } });
-          } : undefined}
+            setTags({ ...tags, [key]: { label, color: colors[Object.keys(tags).length % colors.length] } });
+          }}
           newItem={newItem}
           setNewItem={setNewItem}
         />
@@ -128,14 +124,13 @@ export function Sidebar({
           activeId={filterContext?.length === 1 ? filterContext[0] : null}
           multiSelect
           activeIds={filterContext || []}
-          onSelect={onFilterContext ? (id) => {
-            const current = filterContext || [];
-            onFilterContext(current.includes(id) ? current.filter(c => c !== id) : [...current, id]);
-          } : undefined}
-          onDelete={onUpdateContexts ? (id) => onUpdateContexts(contexts.filter(c => c.id !== id)) : undefined}
-          onAdd={onUpdateContexts ? (label) => {
-            onUpdateContexts([...contexts, { id: crypto.randomUUID(), label, color: '#6366f1', icon: 'computer' }]);
-          } : undefined}
+          onSelect={(id) => {
+            onFilterContext(filterContext.includes(id) ? filterContext.filter(c => c !== id) : [...filterContext, id]);
+          }}
+          onDelete={(id) => setContexts(contexts.filter(c => c.id !== id))}
+          onAdd={(label) => {
+            setContexts([...contexts, { id: crypto.randomUUID(), label, color: '#6366f1', icon: 'computer' }]);
+          }}
           newItem={newItem}
           setNewItem={setNewItem}
         />

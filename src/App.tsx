@@ -42,7 +42,7 @@ import { UserInsights } from '@/components/UserInsights';
 import { WeeklyAnalytics } from '@/components/WeeklyAnalytics';
 
 function App() {
-  // ─── Zustand: all persistent state + actions ───
+  // ─── Store reads (still needed for sync, hooks, WeeklyAnalytics, DataSyncPanel) ───
   const tasks = useAppStore(s => s.tasks);
   const tags = useAppStore(s => s.tags);
   const projects = useAppStore(s => s.projects);
@@ -52,19 +52,13 @@ function App() {
   const theme = useAppStore(s => s.theme);
   const view = useAppStore(s => s.view);
   const selectedDate = useAppStore(s => s.selectedDate);
-  const displayMode = useAppStore(s => s.displayMode);
-  const filterTag = useAppStore(s => s.filterTag);
   const filterContext = useAppStore(s => s.filterContext);
   const filterProject = useAppStore(s => s.filterProject);
-  const glassOpacity = useAppStore(s => s.glassOpacity);
-  const fontSize = useAppStore(s => s.fontSize);
 
+  // Store actions (sync, WeeklyAnalytics, handlers)
   const setView = useAppStore(s => s.setView);
   const setSelectedDate = useAppStore(s => s.setSelectedDate);
   const setDisplayMode = useAppStore(s => s.setDisplayMode);
-  const setFilterTag = useAppStore(s => s.setFilterTag);
-  const setFilterContext = useAppStore(s => s.setFilterContext);
-  const setFilterProject = useAppStore(s => s.setFilterProject);
   const setTasks = useAppStore(s => s.setTasks);
   const setTags = useAppStore(s => s.setTags);
   const setProjects = useAppStore(s => s.setProjects);
@@ -72,22 +66,6 @@ function App() {
   const setContexts = useAppStore(s => s.setContexts);
   const setPerspectives = useAppStore(s => s.setPerspectives);
   const setTheme = useAppStore(s => s.setTheme);
-  const setFontSize = useAppStore(s => s.setFontSize);
-  const setGlassOpacity = useAppStore(s => s.setGlassOpacity);
-
-  const addTask = useAppStore(s => s.addTask);
-  const toggleTask = useAppStore(s => s.toggleTask);
-  const deleteTask = useAppStore(s => s.deleteTask);
-  const editTask = useAppStore(s => s.editTask);
-  const editFullTask = useAppStore(s => s.editFullTask);
-  const reorderTasks = useAppStore(s => s.reorderTasks);
-  const togglePin = useAppStore(s => s.togglePin);
-  const setReminder = useAppStore(s => s.setReminder);
-  const addParsedTasks = useAppStore(s => s.addParsedTasks);
-  const applySchedule = useAppStore(s => s.applySchedule);
-  const addSubTasks = useAppStore(s => s.addSubTasks);
-  const updatePriority = useAppStore(s => s.updatePriority);
-  const reschedule = useAppStore(s => s.reschedule);
   const undo = useAppStore(s => s.undo);
 
   const todayStr = getToday();
@@ -110,13 +88,9 @@ function App() {
 
   const { pullFromServer } = useCloudSync(syncData, setSyncData);
 
-  // ─── Theme effect ───
+  // ─── Side effect hooks ───
   useThemeEffect();
-
-  // ─── URL hash sync ───
   useUrlHashSync();
-
-  // ─── Pull server data on mount ───
   useSyncOnMount(pullFromServer);
 
   // ─── Independent hooks ───
@@ -155,7 +129,7 @@ function App() {
     openPomodoro: () => setPomodoroOpen(true),
     openSearch: () => setSearchOpen(true),
     closeAll: () => {
-      if (editingTask) setEditingTask(null);
+      setEditingTask(null);
       setSyncOpen(false);
       setAiParserOpen(false);
       setAiSummaryOpen(false);
@@ -165,7 +139,7 @@ function App() {
     },
   });
 
-  // ─── Filter logic ───
+  // ─── Context + project filter (still needed for WeeklyAnalytics) ───
   const contextFilteredTasks = useMemo(() => {
     let result = tasks;
     if (filterContext.length > 0) {
@@ -184,19 +158,7 @@ function App() {
     return result;
   }, [tasks, filterContext, filterProject]);
 
-  // ─── Task handlers that combine store + local state ───
-  const handleReschedule = useCallback((id: string, date: string) => {
-    reschedule(id, date);
-  }, [reschedule]);
-
-  const handleOpenEdit = useCallback((task: Task) => {
-    setEditingTask(task);
-  }, []);
-
-  const handleCloseEdit = useCallback(() => {
-    setEditingTask(null);
-  }, []);
-
+  // ─── Convenience handlers ───
   const handleChangeView = useCallback((v: string) => {
     setView(v);
     if (v === 'today') { setSelectedDate(getToday()); setDisplayMode('list'); }
@@ -207,14 +169,6 @@ function App() {
     setSelectedDate(date);
     setView('today');
   }, [setSelectedDate, setView]);
-
-  const handleToggleTheme = useCallback(() => {
-    setTheme(prev => ({ ...prev, isDark: !prev.isDark }));
-  }, [setTheme]);
-
-  const handleChangeColorScheme = useCallback((scheme: string) => {
-    setTheme(prev => ({ ...prev, colorScheme: scheme }));
-  }, [setTheme]);
 
   // ─── Export archive ───
   const handleExportArchive = useCallback(() => {
@@ -244,24 +198,16 @@ function App() {
   return (
     <ErrorBoundary>
     <div className="h-screen flex overflow-hidden" style={{ background: 'var(--color-bg)' }}>
-      {/* Backup Reminder Banner */}
       <BackupReminder onOpenSync={() => setSyncOpen(true)} />
 
-      {/* === Sidebar — Desktop (>=768px) === */}
+      {/* === Sidebar — Desktop === */}
       <div className="hidden md:flex flex-shrink-0 h-full border-r border-[var(--color-border)]">
-        <Sidebar
-          view={view} onChangeView={handleChangeView}
-          onOpenSettings={() => setSettingsOpen(true)}
-          tags={tags} filterTag={filterTag} onFilterTag={setFilterTag}
-          projects={projects} filterProject={filterProject} onFilterProject={setFilterProject}
-          contexts={contexts} filterContext={filterContext} onFilterContext={setFilterContext}
-          onUpdateProjects={setProjects} onUpdateTags={setTags} onUpdateContexts={setContexts}
-        />
+        <Sidebar onOpenSettings={() => setSettingsOpen(true)} />
       </div>
 
-      {/* === Main Content Area === */}
+      {/* === Main Content === */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0" style={{ background: 'var(--color-bg)' }}>
-        {/* Mobile Header (< md) */}
+        {/* Mobile Header */}
         <header className="md:hidden flex-shrink-0 border-b border-[var(--color-border)] px-4 py-3">
           <MobileHeader
             view={view}
@@ -271,9 +217,8 @@ function App() {
           />
         </header>
 
-        {/* Scrollable Content */}
+        {/* Content */}
         <main className={`flex-1 ${view !== 'mindmap' ? 'overflow-y-auto' : ''}`}>
-          {/* Inline toolbar for Today/Week/Checklist only */}
           {['today', 'week', 'checklist'].includes(view) && (
             <div className="flex items-center justify-end gap-2 px-6 pt-3">
               <button onClick={() => setAiParserOpen(true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-[var(--color-brand)] transition-all">
@@ -286,25 +231,16 @@ function App() {
           )}
           {view === 'checklist' ? (
             <div className="p-6">
-              <ChecklistPanel
-                tasks={tasks} checklists={checklists} tags={tags}
-                onAddTask={addTask} onToggleTask={toggleTask} onDeleteTask={deleteTask}
-                onEditTask={editTask} onTogglePin={togglePin} onSetReminder={setReminder}
-                onOpenEdit={handleOpenEdit} onUpdateChecklists={setChecklists} onReorderTasks={reorderTasks}
-                onExportArchive={handleExportArchive}
-              />
+              <ChecklistPanel onOpenEdit={setEditingTask} onExportArchive={handleExportArchive} />
             </div>
           ) : view === 'mindmap' ? (
-            <MindMapPanel onAddTask={addTask} tags={tags} />
+            <MindMapPanel />
           ) : view === 'review' ? (
             <div className="p-6">
-              <ReviewPanel tasks={tasks} checklists={checklists} projects={projects} tags={tags}
-                onToggleTask={toggleTask} onDeleteTask={deleteTask} />
+              <ReviewPanel />
             </div>
           ) : view === 'perspectives' ? (
-            <PerspectivesPanel tasks={tasks} perspectives={perspectives} contexts={contexts} tags={tags} projects={projects}
-              onToggleTask={toggleTask} onDeleteTask={deleteTask} onEditFullTask={editFullTask}
-              onUpdatePerspectives={setPerspectives} />
+            <PerspectivesPanel />
           ) : view === 'habits' ? (
             <div className="p-6">
               <HabitsPanel habits={habits.habits} logs={habits.logs}
@@ -322,14 +258,9 @@ function App() {
             />
           ) : (
             <Dashboard
-              tasks={contextFilteredTasks} selectedDate={selectedDate} displayMode={displayMode}
-              onChangeDisplayMode={setDisplayMode} filterTag={filterTag} onFilterTag={setFilterTag} onSelectDate={handleSelectDate}
-              onToggleTask={toggleTask} onDeleteTask={deleteTask} onEditTask={editTask}
-              onEditFullTask={editFullTask} onAddTask={addTask} onReorderTasks={reorderTasks}
-              completedToday={pomodoro.completedToday} tags={tags} projects={projects} contexts={contexts} templates={taskTemplates.templates}
-              onOpenEdit={setEditingTask} onReorderProjects={setProjects}
-              onApplySchedule={applySchedule} onAddSubTasks={addSubTasks}
-              onUpdatePriority={updatePriority} onReschedule={handleReschedule}
+              onOpenEdit={setEditingTask}
+              completedToday={pomodoro.completedToday}
+              templates={taskTemplates.templates}
               onGenerateSchedule={learning.generateSmartSchedule}
               onGeneratePlan={learning.generateWeeklyPlan}
               pendingTodayCount={learning.pendingTasks.filter(t => t.date === selectedDate).length}
@@ -337,47 +268,23 @@ function App() {
           )}
         </main>
 
-        {/* Mobile Bottom Nav (<768px) */}
+        {/* Mobile Bottom Nav */}
         <nav className="md:hidden flex-shrink-0 border-t border-[var(--color-border)]">
-          <MobileBottomNav view={view} onChangeView={handleChangeView} onOpenPomodoro={() => setPomodoroOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
+          <MobileBottomNav view={view} onChangeView={handleChangeView}
+            onOpenPomodoro={() => setPomodoroOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
         </nav>
       </div>
 
       {/* === Overlays === */}
-      <MobileSidebarDrawer
-        isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)}
-        view={view} onChangeView={handleChangeView}
-        isDark={theme.isDark} onToggleTheme={handleToggleTheme}
-        tags={tags} onFilterTag={setFilterTag} filterTag={filterTag}
-        projects={projects} filterProject={filterProject} onFilterProject={setFilterProject}
-        contexts={contexts} filterContext={filterContext} onFilterContext={setFilterContext}
-        onUpdateTags={setTags} onUpdateProjects={setProjects} onUpdateContexts={setContexts}
-      />
-      <MobileRightPanelSheet
-        isOpen={mobileRightPanelOpen} onClose={() => setMobileRightPanelOpen(false)}
-        tasks={tasks} selectedDate={selectedDate} view={view}
-        onSelectDate={handleSelectDate} onToggleTask={toggleTask}
-        onUpdateQuadrant={useAppStore.getState().updateQuadrant} onOpenEdit={setEditingTask} tags={tags}
-      />
+      <MobileSidebarDrawer isOpen={mobileSidebarOpen} onClose={() => setMobileSidebarOpen(false)} />
+      <MobileRightPanelSheet isOpen={mobileRightPanelOpen} onClose={() => setMobileRightPanelOpen(false)}
+        onOpenEdit={setEditingTask} />
 
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)}
-        tasks={tasks} projects={projects} contexts={contexts} tags={tags}
-        onOpenEdit={setEditingTask} onSelectDate={handleSelectDate}
-      />
+        onOpenEdit={setEditingTask} onSelectDate={handleSelectDate} />
 
-      {/* Task Edit Modal */}
-      <TaskEditModal
-        isOpen={!!editingTask}
-        onClose={handleCloseEdit}
-        task={editingTask}
-        tags={tags}
-        projects={projects}
-        contexts={contexts}
-        allTasks={tasks}
-        onSave={editFullTask}
-      />
+      <TaskEditModal isOpen={!!editingTask} onClose={() => setEditingTask(null)} task={editingTask} />
 
-      {/* Data Sync Panel */}
       <DataSyncPanel
         isOpen={syncOpen}
         onClose={() => setSyncOpen(false)}
@@ -396,7 +303,6 @@ function App() {
           (data.checklists || []).forEach((c, i) => { checklistMap[c.id] = newChecklists[i].id; });
           const contextMap: Record<string, string> = {};
           (data.contexts || []).forEach((c, i) => { contextMap[c.id] = newContexts[i].id; });
-
           const taskMap: Record<string, string> = {};
           (data.tasks || []).forEach((t, i) => { taskMap[t.id] = newTasks[i].id; });
 
@@ -425,101 +331,40 @@ function App() {
           if (data.checklists) setChecklists(newChecklists);
           if (data.contexts) setContexts(newContexts);
           if (data.perspectives) setPerspectives(newPerspectives);
-          if (data.theme) {
-            const importedTheme = data.theme as { colorScheme: string; isDark: boolean };
-            setTheme(importedTheme);
-          }
+          if (data.theme) setTheme(data.theme as any);
 
           const { syncPut } = await import('@/utils/api');
           syncPut({
-            tasks: remappedTasks,
-            projects: newProjects,
-            checklists: newChecklists,
+            tasks: remappedTasks, projects: newProjects, checklists: newChecklists,
             tags: Object.entries(data.tags || {}).map(([key, val]) => ({
               id: `tag_${key}`, label: (val as any).label, color: (val as any).color,
             })),
-            contexts: newContexts,
-            perspectives: newPerspectives,
-          }).catch((e: any) => console.warn('导入数据同步到服务器失败，将基于本地数据恢复:', e));
+            contexts: newContexts, perspectives: newPerspectives,
+          }).catch((e: any) => console.warn('导入数据同步到服务器失败:', e));
 
           setTimeout(() => window.location.reload(), 800);
         }}
       />
 
-      {/* AI Parser Modal */}
-      <AIParserModal
-        isOpen={aiParserOpen}
-        onClose={() => setAiParserOpen(false)}
-        onAddTasks={addParsedTasks}
-        tags={tags}
-      />
+      <AIParserModal isOpen={aiParserOpen} onClose={() => setAiParserOpen(false)} />
+      <AISummaryModal isOpen={aiSummaryOpen} onClose={() => setAiSummaryOpen(false)}
+        timeRange={aiSummaryRange} onTimeRangeChange={setAiSummaryRange} />
+      <ThemeSettings isOpen={themeSettingsOpen} onClose={() => setThemeSettingsOpen(false)} />
+      <MobileEditDrawer isOpen={!!editingTask} onClose={() => setEditingTask(null)} task={editingTask} />
+      <NotificationSettings isOpen={notificationSettingsOpen} onClose={() => setNotificationSettingsOpen(false)} />
 
-      {/* AI Summary Modal */}
-      <AISummaryModal
-        isOpen={aiSummaryOpen}
-        onClose={() => setAiSummaryOpen(false)}
-        tasks={tasks}
-        timeRange={aiSummaryRange}
-        onTimeRangeChange={setAiSummaryRange}
-      />
-
-      {/* Theme Settings Modal */}
-      <ThemeSettings
-        isOpen={themeSettingsOpen}
-        onClose={() => setThemeSettingsOpen(false)}
-        colorScheme={theme.colorScheme}
-        onChangeColorScheme={handleChangeColorScheme}
-        isDark={theme.isDark}
-        onToggleDark={handleToggleTheme}
-        tags={tags}
-        onUpdateTags={setTags}
-        fontSize={fontSize}
-        onChangeFontSize={setFontSize}
-      />
-
-      {/* Mobile Edit Drawer (replaces modal on mobile) */}
-      <MobileEditDrawer
-        isOpen={!!editingTask}
-        onClose={handleCloseEdit}
-        task={editingTask}
-        tags={tags}
-        projects={projects}
-        contexts={contexts}
-        onSave={editFullTask}
-      />
-
-      {/* Notification Settings Modal */}
-      <NotificationSettings
-        isOpen={notificationSettingsOpen}
-        onClose={() => setNotificationSettingsOpen(false)}
-      />
-
-      {/* Settings Modal */}
       <SettingsModal
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        onOpenSync={() => setSyncOpen(true)}
-        onOpenTheme={() => setThemeSettingsOpen(true)}
+        isOpen={settingsOpen} onClose={() => setSettingsOpen(false)}
+        onOpenSync={() => setSyncOpen(true)} onOpenTheme={() => setThemeSettingsOpen(true)}
         onExportArchive={handleExportArchive}
-        colorScheme={theme.colorScheme}
-        isDark={theme.isDark}
-        onChangeColorScheme={handleChangeColorScheme}
-        onToggleDark={handleToggleTheme}
-        fontSize={fontSize}
-        onChangeFontSize={setFontSize}
       />
 
-      {/* Daily Review Modal */}
       <DailyReviewModal
-        isOpen={dailyReviewOpen}
-        onClose={() => setDailyReviewOpen(false)}
-        tasks={tasks}
+        isOpen={dailyReviewOpen} onClose={() => setDailyReviewOpen(false)}
         pomodoroCompletedToday={pomodoro.completedToday}
-        date={selectedDate}
         onOpenReview={() => { setView('review'); setDailyReviewOpen(false); }}
       />
 
-      {/* Pomodoro Modal */}
       <PomodoroModal
         isOpen={pomodoroOpen} onClose={() => setPomodoroOpen(false)}
         minutes={pomodoro.minutes} seconds={pomodoro.seconds}

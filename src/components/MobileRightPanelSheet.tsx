@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { X, Calendar, Grid3X3, Timer, Cloud } from 'lucide-react';
 import type { Task } from '@/types';
+import { useAppStore } from '@/store';
 import { WeatherTimeWidget } from './WeatherTimeWidget';
 import { CalendarPanel } from './CalendarPanel';
 import { QuadrantPanel } from './QuadrantPanel';
@@ -19,14 +20,7 @@ const TABS: { id: SheetTab; label: string; icon: React.ElementType }[] = [
 interface MobileRightPanelSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  tasks: Task[];
-  selectedDate: string;
-  view: string;
-  onSelectDate: (date: string) => void;
-  onToggleTask: (id: string) => void;
-  onUpdateQuadrant: (id: string, importance: 'important' | 'normal', urgency: 'urgent' | 'normal') => void;
   onOpenEdit: (task: Task) => void;
-  tags: Record<string, { label: string; color: string }>;
 }
 
 /**
@@ -35,10 +29,16 @@ interface MobileRightPanelSheetProps {
  * 在 Mobile (<768px) 和 Tablet (768~1024px) 上使用
  */
 export function MobileRightPanelSheet({
-  isOpen, onClose, tasks, selectedDate, view,
-  onSelectDate, onToggleTask, onUpdateQuadrant, onOpenEdit, tags,
+  isOpen, onClose, onOpenEdit,
 }: MobileRightPanelSheetProps) {
   const [activeTab, setActiveTab] = useState<SheetTab>('weather');
+  const tasks = useAppStore(s => s.tasks);
+  const selectedDate = useAppStore(s => s.selectedDate);
+  const view = useAppStore(s => s.view);
+  const setSelectedDate = useAppStore(s => s.setSelectedDate);
+  const toggleTask = useAppStore(s => s.toggleTask);
+  const updateQuadrant = useAppStore(s => s.updateQuadrant);
+  const tags = useAppStore(s => s.tags);
 
   return (
     <>
@@ -105,7 +105,7 @@ export function MobileRightPanelSheet({
             <CalendarPanel
               tasks={tasks}
               selectedDate={selectedDate}
-              onSelectDate={(date) => { onSelectDate(date); onClose(); }}
+              onSelectDate={(date) => { setSelectedDate(date); onClose(); }}
               tags={tags}
             />
           )}
@@ -114,14 +114,14 @@ export function MobileRightPanelSheet({
               tasks={tasks}
               selectedDate={selectedDate}
               view={view}
-              onToggleTask={onToggleTask}
-              onUpdateQuadrant={onUpdateQuadrant}
+              onToggleTask={toggleTask}
+              onUpdateQuadrant={updateQuadrant}
             />
           )}
           {activeTab === 'countdown' && (
             <CountdownPanel
               tasks={tasks}
-              onToggleTask={onToggleTask}
+              onToggleTask={toggleTask}
               onOpenEdit={onOpenEdit}
             />
           )}

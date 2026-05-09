@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, Sun, Moon, Check, Palette, Tag, Plus, Trash2, Type } from 'lucide-react';
 import type { ThemeColor } from '@/types';
 import type { FontSize } from '@/hooks/useFontSize';
+import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
 const PRESET_COLORS = [
@@ -12,14 +13,6 @@ const PRESET_COLORS = [
 interface ThemeSettingsProps {
   isOpen: boolean;
   onClose: () => void;
-  colorScheme: ThemeColor;
-  onChangeColorScheme: (scheme: ThemeColor) => void;
-  isDark: boolean;
-  onToggleDark: () => void;
-  tags?: Record<string, { label: string; color: string }>;
-  onUpdateTags?: (tags: Record<string, { label: string; color: string }>) => void;
-  fontSize?: FontSize;
-  onChangeFontSize?: (size: FontSize) => void;
 }
 
 interface ThemeOption {
@@ -41,10 +34,15 @@ const themeOptions: ThemeOption[] = [
 ];
 
 export function ThemeSettings({
-  isOpen, onClose, colorScheme, onChangeColorScheme, isDark, onToggleDark,
-  tags = {}, onUpdateTags,
-  fontSize = 'medium', onChangeFontSize,
+  isOpen, onClose,
 }: ThemeSettingsProps) {
+  const colorScheme = useAppStore(s => s.theme.colorScheme);
+  const isDark = useAppStore(s => s.theme.isDark);
+  const setTheme = useAppStore(s => s.setTheme);
+  const tags = useAppStore(s => s.tags);
+  const setTags = useAppStore(s => s.setTags);
+  const fontSize = useAppStore(s => s.fontSize);
+  const setFontSize = useAppStore(s => s.setFontSize);
   const [activeTab, setActiveTab] = useState<'theme' | 'tags'>('theme');
   const [newTagLabel, setNewTagLabel] = useState('');
   const [newTagKey, setNewTagKey] = useState('');
@@ -52,17 +50,16 @@ export function ThemeSettings({
   if (!isOpen) return null;
 
   const handleColorChange = (tagKey: string, color: string) => {
-    if (!onUpdateTags) return;
-    onUpdateTags({
+    setTags({
       ...tags,
       [tagKey]: { ...tags[tagKey], color },
     });
   };
 
   const handleAddTag = () => {
-    if (!onUpdateTags || !newTagKey.trim() || !newTagLabel.trim()) return;
+    if (!newTagKey.trim() || !newTagLabel.trim()) return;
     if (tags[newTagKey.trim()]) return;
-    onUpdateTags({
+    setTags({
       ...tags,
       [newTagKey.trim()]: { label: newTagLabel.trim(), color: PRESET_COLORS[Object.keys(tags).length % PRESET_COLORS.length] },
     });
@@ -71,10 +68,9 @@ export function ThemeSettings({
   };
 
   const handleDeleteTag = (tagKey: string) => {
-    if (!onUpdateTags) return;
     const next = { ...tags };
     delete next[tagKey];
-    onUpdateTags(next);
+    setTags(next);
   };
 
   return (
@@ -135,7 +131,7 @@ export function ThemeSettings({
                   ]).map((opt) => (
                     <button
                       key={opt.key}
-                      onClick={() => onChangeFontSize?.(opt.key)}
+                      onClick={() => setFontSize(opt.key)}
                       className={cn(
                         'flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all',
                         fontSize === opt.key
@@ -154,7 +150,7 @@ export function ThemeSettings({
                 <h4 className="text-sm font-medium text-[var(--app-text)] mb-3">显示模式</h4>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => { if (isDark) onToggleDark(); }}
+                    onClick={() => { if (isDark) setTheme(prev => ({ ...prev, isDark: false })); }}
                     className={cn(
                       'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all flex-1',
                       !isDark
@@ -166,7 +162,7 @@ export function ThemeSettings({
                     亮色
                   </button>
                   <button
-                    onClick={() => { if (!isDark) onToggleDark(); }}
+                    onClick={() => { if (!isDark) setTheme(prev => ({ ...prev, isDark: true })); }}
                     className={cn(
                       'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all flex-1',
                       isDark
@@ -187,7 +183,7 @@ export function ThemeSettings({
                   {themeOptions.map((option) => (
                     <button
                       key={option.id}
-                      onClick={() => onChangeColorScheme(option.id)}
+                      onClick={() => setTheme(prev => ({ ...prev, colorScheme: option.id }))}
                       className={cn(
                         'flex items-center gap-3 p-3 rounded-xl border text-left transition-all',
                         colorScheme === option.id

@@ -5,7 +5,7 @@ import {
   Flame, Moon, Sun, X,
   Brain, Calendar, Zap, Tag, FolderKanban, MapPin,
 } from 'lucide-react';
-import type { Project, Context } from '@/types';
+import { useAppStore } from '@/store';
 
 const NAV_ITEMS = [
   { id: 'today', label: '仪表盘', icon: LayoutDashboard },
@@ -23,39 +23,27 @@ const NAV_ITEMS = [
 interface MobileSidebarDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  view: string;
-  onChangeView: (view: string) => void;
-  isDark: boolean;
-  onToggleTheme: () => void;
-  tags?: Record<string, { label: string; color: string }>;
-  onFilterTag?: (tag: string | null) => void;
-  filterTag?: string | null;
-  projects?: Project[];
-  filterProject?: string | null;
-  onFilterProject?: (project: string | null) => void;
-  contexts?: Context[];
-  filterContext?: string[];
-  onFilterContext?: (context: string[]) => void;
-  onUpdateTags?: (tags: Record<string, { label: string; color: string }>) => void;
-  onUpdateProjects?: (projects: Project[]) => void;
-  onUpdateContexts?: (contexts: Context[]) => void;
 }
 
-/**
- * Mobile Sidebar Drawer
- * 从左侧滑出，包含完整导航 + 标签/项目/上下文筛选
- * 仅在 Mobile (<768px) 使用
- */
-export function MobileSidebarDrawer({
-  isOpen, onClose, view, onChangeView, isDark, onToggleTheme,
-  tags, onFilterTag, filterTag,
-  projects, filterProject, onFilterProject,
-  contexts, filterContext, onFilterContext,
-}: MobileSidebarDrawerProps) {
+export function MobileSidebarDrawer({ isOpen, onClose }: MobileSidebarDrawerProps) {
+  const view = useAppStore(s => s.view);
+  const setView = useAppStore(s => s.setView);
+  const isDark = useAppStore(s => s.theme.isDark);
+  const setTheme = useAppStore(s => s.setTheme);
+  const tags = useAppStore(s => s.tags);
+  const filterTag = useAppStore(s => s.filterTag);
+  const setFilterTag = useAppStore(s => s.setFilterTag);
+  const projects = useAppStore(s => s.projects);
+  const filterProject = useAppStore(s => s.filterProject);
+  const setFilterProject = useAppStore(s => s.setFilterProject);
+  const contexts = useAppStore(s => s.contexts);
+  const filterContext = useAppStore(s => s.filterContext);
+  const setFilterContext = useAppStore(s => s.setFilterContext);
+
   const [expandedSection, setExpandedSection] = useState<'projects' | 'tags' | 'contexts' | null>('projects');
 
   const handleNavClick = (id: string) => {
-    onChangeView(id);
+    setView(id);
     onClose();
   };
 
@@ -64,13 +52,8 @@ export function MobileSidebarDrawer({
   };
 
   const toggleContextFilter = (ctxId: string) => {
-    if (!onFilterContext || !filterContext) return;
     const isActive = filterContext.includes(ctxId);
-    if (isActive) {
-      onFilterContext(filterContext.filter(c => c !== ctxId));
-    } else {
-      onFilterContext([...filterContext, ctxId]);
-    }
+    setFilterContext(isActive ? filterContext.filter(c => c !== ctxId) : [...filterContext, ctxId]);
   };
 
   return (
@@ -147,12 +130,12 @@ export function MobileSidebarDrawer({
                 <FolderKanban size={12} />
                 我的项目
               </span>
-              <span className="text-[10px]">{projects?.length || 0}</span>
+              <span className="text-[10px]">{projects.length}</span>
             </button>
-            {expandedSection === 'projects' && projects && projects.map(p => (
+            {expandedSection === 'projects' && projects.map(p => (
               <button
                 key={p.id}
-                onClick={() => onFilterProject?.(filterProject === p.id ? null : p.id)}
+                onClick={() => setFilterProject(filterProject === p.id ? null : p.id)}
                 className={cn(
                   'flex items-center gap-2 px-3 py-1.5 rounded-lg w-full text-left transition-all',
                   filterProject === p.id
@@ -176,12 +159,12 @@ export function MobileSidebarDrawer({
                 <Tag size={12} />
                 标签
               </span>
-              <span className="text-[10px]">{tags ? Object.keys(tags).length : 0}</span>
+              <span className="text-[10px]">{Object.keys(tags).length}</span>
             </button>
-            {expandedSection === 'tags' && tags && Object.entries(tags).map(([key, tag]) => (
+            {expandedSection === 'tags' && Object.entries(tags).map(([key, tag]) => (
               <button
                 key={key}
-                onClick={() => onFilterTag?.(filterTag === key ? null : key)}
+                onClick={() => setFilterTag(filterTag === key ? null : key)}
                 className={cn(
                   'flex items-center gap-2 px-3 py-1.5 rounded-lg w-full text-left transition-all',
                   filterTag === key
@@ -205,15 +188,15 @@ export function MobileSidebarDrawer({
                 <MapPin size={12} />
                 上下文
               </span>
-              <span className="text-[10px]">{contexts?.length || 0}</span>
+              <span className="text-[10px]">{contexts.length}</span>
             </button>
-            {expandedSection === 'contexts' && contexts && contexts.map(ctx => (
+            {expandedSection === 'contexts' && contexts.map(ctx => (
               <button
                 key={ctx.id}
                 onClick={() => toggleContextFilter(ctx.id)}
                 className={cn(
                   'flex items-center gap-2 px-3 py-1.5 rounded-lg w-full text-left transition-all',
-                  filterContext && filterContext.includes(ctx.id)
+                  filterContext.includes(ctx.id)
                     ? 'bg-[var(--app-accent)]/10 text-[var(--app-accent)]'
                     : 'text-[var(--app-text-secondary)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)]'
                 )}
@@ -228,7 +211,7 @@ export function MobileSidebarDrawer({
         {/* Bottom actions */}
         <div className="flex items-center gap-2 px-4 py-3 border-t border-[var(--app-border)] shrink-0">
           <button
-            onClick={onToggleTheme}
+            onClick={() => setTheme(prev => ({ ...prev, isDark: !prev.isDark }))}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-[var(--app-text-muted)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)] transition-all"
           >
             {isDark ? <Sun size={14} /> : <Moon size={14} />}

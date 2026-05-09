@@ -5,6 +5,7 @@ import {
   Target, Bug, FileText, Link2, Bookmark, Zap,
   ExternalLink, Image, File, X, Paperclip,
 } from 'lucide-react';
+import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
 /* ============================================================
@@ -137,12 +138,11 @@ async function aiExpand(nodeText: string, parentContext: string, mode: 'expand' 
    Main Component
    ============================================================ */
 
-interface MindMapPanelProps {
-  onAddTask?: (task: any) => void;
-  tags?: Record<string, { label: string; color: string }>;
-}
+interface MindMapPanelProps {}
 
-export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
+export function MindMapPanel({}: MindMapPanelProps) {
+  const addTask = useAppStore(s => s.addTask);
+  const tags = useAppStore(s => s.tags);
   const [data, setData] = useState<MindMapData>(loadData);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -260,8 +260,8 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
 
   const handleConvertToTask = useCallback((nodeId: string) => {
     const node = getNode(nodeId);
-    if (!node || !onAddTask) return;
-    onAddTask({
+    if (!node) return;
+    addTask({
       title: node.text,
       completed: false,
       date: taskDate,
@@ -280,7 +280,7 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
     });
     updateNode(nodeId, { linkedTaskId: `linked-${Date.now()}` });
     setContextMenu(null);
-  }, [getNode, onAddTask, taskDate, taskTag, updateNode]);
+  }, [getNode, addTask, taskDate, taskTag, updateNode]);
 
   /* ── Attachment ── */
 
@@ -692,24 +692,22 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
             </div>
 
             {/* Convert to task */}
-            {onAddTask && (
-              <div className="border-t border-[var(--app-border)] pt-3 mt-3">
-                <p className="text-[10px] text-[var(--app-text-muted)] uppercase mb-2">转为日程任务</p>
-                <div className="flex gap-1 mb-2">
-                  <input type="date" value={taskDate} onChange={e => setTaskDate(e.target.value)}
-                    className="flex-1 text-[10px] bg-[#1a1b23] rounded px-2 py-1 border border-[var(--app-border)] text-[var(--app-text)]" />
-                  <select value={taskTag} onChange={e => setTaskTag(e.target.value)}
-                    className="text-[10px] bg-[#1a1b23] rounded px-2 py-1 border border-[var(--app-border)] text-[var(--app-text)]">
-                    {Object.entries(tags).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                  </select>
-                </div>
-                <button onClick={() => handleConvertToTask(selectedNode.id)}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium transition-all text-white"
-                  style={{ background: 'var(--app-accent)' }}>
-                  <ListChecks size={12} />转为任务
-                </button>
+            <div className="border-t border-[var(--app-border)] pt-3 mt-3">
+              <p className="text-[10px] text-[var(--app-text-muted)] uppercase mb-2">转为日程任务</p>
+              <div className="flex gap-1 mb-2">
+                <input type="date" value={taskDate} onChange={e => setTaskDate(e.target.value)}
+                  className="flex-1 text-[10px] bg-[#1a1b23] rounded px-2 py-1 border border-[var(--app-border)] text-[var(--app-text)]" />
+                <select value={taskTag} onChange={e => setTaskTag(e.target.value)}
+                  className="text-[10px] bg-[#1a1b23] rounded px-2 py-1 border border-[var(--app-border)] text-[var(--app-text)]">
+                  {Object.entries(tags).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
               </div>
-            )}
+              <button onClick={() => handleConvertToTask(selectedNode.id)}
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-medium transition-all text-white"
+                style={{ background: 'var(--app-accent)' }}>
+                <ListChecks size={12} />转为任务
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -739,7 +737,7 @@ export function MindMapPanel({ onAddTask, tags = {} }: MindMapPanelProps) {
                 );
               })}
             </div>
-            {onAddTask && ctxNode && (
+            {ctxNode && (
               <>
                 <div className="h-px bg-[var(--app-border)] my-1" />
                 <MenuItem icon={ExternalLink} label="📋 转为日程任务" onClick={() => {

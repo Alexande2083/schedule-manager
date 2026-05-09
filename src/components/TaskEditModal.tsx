@@ -4,8 +4,9 @@ import {
   RotateCcw, Monitor, Smartphone, Building2, Car, Users, Home, GitBranch, Repeat, Link2,
   Eye, Edit3,
 } from 'lucide-react';
-import type { Task, Project, Context } from '@/types';
+import type { Task } from '@/types';
 import { cn } from '@/lib/utils';
+import { useAppStore } from '@/store';
 
 const CONTEXT_ICONS: Record<string, React.ElementType> = {
   Monitor, Smartphone, Building2, Car, Users, Home,
@@ -15,14 +16,15 @@ interface TaskEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: Task | null;
-  tags: Record<string, { label: string; color: string }>;
-  projects: Project[];
-  contexts?: Context[];
-  allTasks?: Task[];
-  onSave: (id: string, updates: Partial<Task>) => void;
 }
 
-export function TaskEditModal({ isOpen, onClose, task, tags, projects, contexts, allTasks, onSave }: TaskEditModalProps) {
+export function TaskEditModal({ isOpen, onClose, task }: TaskEditModalProps) {
+  const tags = useAppStore(s => s.tags);
+  const projects = useAppStore(s => s.projects);
+  const contexts = useAppStore(s => s.contexts);
+  const allTasks = useAppStore(s => s.tasks);
+  const editFullTask = useAppStore(s => s.editFullTask);
+
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -103,7 +105,7 @@ export function TaskEditModal({ isOpen, onClose, task, tags, projects, contexts,
 
   const handleSaveOnly = () => {
     if (!task || !title.trim()) return;
-    onSave(task.id, {
+    editFullTask(task.id, {
       title: title.trim(),
       date,
       time: time || undefined,
@@ -125,7 +127,7 @@ export function TaskEditModal({ isOpen, onClose, task, tags, projects, contexts,
 
   const handleSaveAndComplete = () => {
     if (!task || !title.trim()) return;
-    onSave(task.id, {
+    editFullTask(task.id, {
       title: title.trim(),
       date,
       time: time || undefined,

@@ -2,18 +2,18 @@ import { useMemo, useState } from 'react';
 import { format, parseISO, differenceInDays, subDays } from 'date-fns';
 import { CheckCircle2, AlertTriangle, Clock, RotateCcw, Trash2, Eye } from 'lucide-react';
 import type { Task, Checklist, Project } from '@/types';
+import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
-interface ReviewPanelProps {
-  tasks: Task[];
-  checklists: Checklist[];
-  projects: Project[];
-  tags: Record<string, { label: string; color: string }>;
-  onToggleTask: (id: string) => void;
-  onDeleteTask: (id: string) => void;
-}
+interface ReviewPanelProps {}
 
-export function ReviewPanel({ tasks, checklists, projects, tags, onToggleTask, onDeleteTask }: ReviewPanelProps) {
+export function ReviewPanel({}: ReviewPanelProps) {
+  const tasks = useAppStore(s => s.tasks);
+  const checklists = useAppStore(s => s.checklists);
+  const projects = useAppStore(s => s.projects);
+  const tags = useAppStore(s => s.tags);
+  const toggleTask = useAppStore(s => s.toggleTask);
+  const deleteTask = useAppStore(s => s.deleteTask);
   const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<'all' | 'stale' | 'overdue' | 'pinned'>('all');
 
@@ -204,7 +204,7 @@ export function ReviewPanel({ tasks, checklists, projects, tags, onToggleTask, o
                       )}
                     >
                       <button
-                        onClick={() => onToggleTask(task.id)}
+                        onClick={() => toggleTask(task.id)}
                         className={cn(
                           'mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0',
                           task.completed
@@ -262,7 +262,7 @@ export function ReviewPanel({ tasks, checklists, projects, tags, onToggleTask, o
                         </button>
                         <button
                           onClick={() => {
-                            if (window.confirm('确定删除此任务？')) onDeleteTask(task.id);
+                            if (window.confirm('确定删除此任务？')) deleteTask(task.id);
                           }}
                           className="p-1 rounded text-[var(--app-text-muted)] hover:text-red-500 transition-all"
                         >
