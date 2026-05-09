@@ -201,7 +201,7 @@ export function MobileSidebarDrawer({ isOpen, onClose }: MobileSidebarDrawerProp
                     : 'text-[var(--app-text-secondary)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)]'
                 )}
               >
-                <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: ctx.color }} />
+                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ctx.color }} />
                 <span className="text-xs">{ctx.label}</span>
               </button>
             ))}
