@@ -3,7 +3,7 @@ import {
   Plus, Download, ChevronDown, Trash2, Copy,
   ZoomIn, ZoomOut, Maximize, Sparkles, ListChecks,
   Target, Bug, FileText, Link2, Bookmark, Zap,
-  ExternalLink, Image, File, X, Paperclip,
+  ExternalLink, Image, File, X, Paperclip, Upload,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
@@ -300,6 +300,42 @@ export function MindMapPanel({}: MindMapPanelProps) {
     });
     setAttachUrl('');
   }, [attachUrl, getNode, updateNode]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileUpload = useCallback(async (nodeId: string) => {
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => { const r = reader.result as string; resolve(r.split(',')[1]); };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: file.name, mimeType: file.type, content: base64 }),
+      });
+      if (!res.ok) throw new Error('upload failed');
+      const data = await res.json();
+      let attType: MindMapNodeAttachment['type'] = 'link';
+      if (file.type.startsWith('image/')) attType = 'image';
+      else if (file.type === 'application/pdf') attType = 'pdf';
+      else if (file.name.endsWith('.md')) attType = 'markdown';
+      updateNode(nodeId, {
+        attachments: [...(getNode(nodeId)?.attachments || []), {
+          id: generateId(), type: attType, url: data.url, name: file.name,
+        }],
+      });
+    } catch { /* ignore */ } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }, [getNode, updateNode]);
 
   const handleRemoveAttachment = useCallback((nodeId: string, attId: string) => {
     const node = getNode(nodeId);
@@ -669,19 +705,24 @@ export function MindMapPanel({}: MindMapPanelProps) {
             <div className="mb-3">
               <p className="text-[10px] text-[var(--app-text-muted)] uppercase mb-1.5">附件</p>
               <div className="flex gap-1 mb-2">
-                <input value={attachUrl} onChange={e => setAttachUrl(e.target.value)} placeholder="粘贴链接..."
+                <input value={attachUrl} onChange={e => setAttachUrl(e.target.value)} placeholder="粘贴链接或上传文件..."
                   className="flex-1 text-[10px] bg-[#1a1b23] rounded px-2 py-1 border border-[var(--app-border)] text-[var(--app-text)] outline-none"
                   onKeyDown={e => e.key === 'Enter' && handleAddAttachment(selectedNode.id)} />
                 <button onClick={() => handleAddAttachment(selectedNode.id)}
                   className="px-2 py-1 bg-[var(--app-accent)] text-white rounded text-[10px] font-medium">+</button>
+                <input ref={fileInputRef} type="file" className="hidden" onChange={() => handleFileUpload(selectedNode.id)} />
+                <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
+                  className="px-2 py-1 bg-[var(--color-text-muted)] text-white rounded text-[10px] font-medium disabled:opacity-50">
+                  {uploading ? '···' : <Upload size={12} />}
+                </button>
               </div>
               {selectedNode.attachments.length > 0 && (
-                <div className="space-y-1">
+                <div className="space-y-1 max-h-40 overflow-y-auto">
                   {selectedNode.attachments.map(a => (
                     <div key={a.id} className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] bg-[#1a1b23] border border-[var(--app-border)] group">
-                      {a.type === 'image' ? <Image size={10} className="text-blue-400" /> :
-                       a.type === 'link' ? <Link2 size={10} className="text-cyan-400" /> :
-                       <File size={10} className="text-[var(--app-text-muted)]" />}
+                      {a.type === 'image' ? <Image size={10} className="text-blue-400 shrink-0" /> :
+                       a.type === 'link' ? <Link2 size={10} className="text-cyan-400 shrink-0" /> :
+                       <File size={10} className="text-[var(--app-text-muted)] shrink-0" />}
                       <a href={a.url} target="_blank" rel="noopener" className="flex-1 truncate text-[var(--app-text-secondary)] hover:text-[var(--app-accent)]">{a.name}</a>
                       <button onClick={() => handleRemoveAttachment(selectedNode.id, a.id)}
                         className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300"><X size={10} /></button>

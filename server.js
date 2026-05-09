@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { initDb, getDb, saveDb, rowToTask, rowsToTasks } from './db.js';
+import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -635,6 +637,99 @@ app.post('/api/mindmap/expand', validate(MindMapExpandSchema), async (req, res) 
     res.json({ children });
   } catch (err) {
     res.status(500).json({ error: err.message || 'AI 扩展失败' });
+  }
+});
+
+// ─── File Upload ─────────────────────────────────────────
+const UPLOAD_DIR = join(__dirname, 'uploads');
+
+// Ensure upload directory exists
+if (!existsSync(UPLOAD_DIR)) mkdirSync(UPLOAD_DIR, { recursive: true });
+
+app.post('/api/upload', async (req, res) => {
+  try {
+    const { name, mimeType, content } = req.body;
+    if (!name || !content) {
+      return res.status(400).json({ error: '缺少文件名称或内容' });
+    }
+    const id = crypto.randomUUID();
+    const safeName = name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fileDir = join(UPLOAD_DIR, id);
+    mkdirSync(fileDir, { recursive: true });
+    const filePath = join(fileDir, safeName);
+
+    // Decode base64 and write
+    const buffer = Buffer.from(content, 'base64');
+    writeFileSync(filePath, buffer);
+
+    // Store metadata in DB
+    const db = getDb();
+    db.run(`INSERT OR REPLACE INTO files (id, user_id, original_name, mime_type, size, storage_path) VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, DEFAULT_USER_ID, name, mimeType || 'application/octet-stream', buffer.length, `${id}/${safeName}`]);
+    saveDb();
+
+    res.json({ id, url: `/api/uploads/${id}/${safeName}`, name, size: buffer.length });
+  } catch (err) {
+    console.error('❌ POST /api/upload 错误:', err.message);
+    res.status(500).json({ error: err.message || '上传失败' });
+  }
+});
+
+// Serve uploaded files
+app.get('/api/uploads/:id/:filename', (req, res) => {
+  try {
+    const filePath = join(UPLOAD_DIR, req.params.id, req.params.filename);
+    // Prevent path traversal
+    if (!filePath.startsWith(UPLOAD_DIR)) {
+      return res.status(403).json({ error: '非法路径' });
+    }
+    if (!existsSync(filePath)) {
+      return res.status(404).json({ error: '文件不存在' });
+    }
+    const db = getDb();
+    const rows = execToObjects(db, `SELECT mime_type FROM files WHERE id = ?`, [req.params.id]);
+    if (rows.length > 0 && rows[0].mime_type) {
+      res.setHeader('Content-Type', rows[0].mime_type);
+    }
+    res.sendFile(filePath);
+  } catch (err) {
+    res.status(500).json({ error: err.message || '读取失败' });
+  }
+});
+
+// List uploaded files
+app.get('/api/uploads', (req, res) => {
+  try {
+    const db = getDb();
+    const rows = execToObjects(db, `SELECT id, original_name, mime_type, size, created_at FROM files WHERE user_id = ? ORDER BY created_at DESC`, [DEFAULT_USER_ID]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message || '查询失败' });
+  }
+});
+
+// Delete uploaded file
+app.delete('/api/uploads/:id', (req, res) => {
+  try {
+    const db = getDb();
+    const rows = execToObjects(db, `SELECT storage_path FROM files WHERE id = ?`, [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: '文件不存在' });
+
+    const filePath = join(UPLOAD_DIR, rows[0].storage_path);
+    if (existsSync(filePath)) {
+      import('fs').then(fs => fs.unlinkSync(filePath));
+    }
+    // Clean up empty directory
+    const dirPath = join(UPLOAD_DIR, req.params.id);
+    if (existsSync(dirPath)) {
+      import('fs').then(fs => { try { fs.rmdirSync(dirPath); } catch {} });
+    }
+
+    db.run(`DELETE FROM files WHERE id = ?`, [req.params.id]);
+    saveDb();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message || '删除失败' });
   }
 });
 
