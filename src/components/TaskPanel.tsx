@@ -37,7 +37,6 @@ interface TaskPanelProps {
   onToggleTask: (id: string) => void;
   onDeleteTask: (id: string) => void;
   onEditTask: (id: string, title: string) => void;
-  onEditFullTask: (id: string, updates: Partial<Task>) => void;
   onAddTask: (task: Omit<Task, 'id' | 'createdAt' | 'order'>) => void;
   onReorderTasks: (tasks: Task[]) => void;
   completedToday: number;
@@ -65,7 +64,6 @@ export function TaskPanel({
   onToggleTask,
   onDeleteTask,
   onEditTask,
-  onEditFullTask,
   onAddTask,
   onReorderTasks,
   completedToday,
@@ -375,11 +373,6 @@ export function TaskPanel({
         isOpen={!!editingTask}
         onClose={() => setEditingTask(null)}
         task={editingTask}
-        tags={tags}
-        projects={projects}
-        contexts={contexts}
-        allTasks={tasks}
-        onSave={onEditFullTask}
       />
     </div>
   );

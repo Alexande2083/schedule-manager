@@ -5,7 +5,7 @@ import {
   Plus, X, Check, Eye, Trash2, ChevronDown, ChevronRight, ChevronDown as ChevronDownIcon,
   Monitor, Smartphone, Building2, Car, Users, Home
 } from 'lucide-react';
-import type { Task, Perspective, Context, Project } from '@/types';
+import type { Task, Perspective } from '@/types';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 
@@ -19,11 +19,7 @@ interface PerspectivesPanelProps {}
 export function PerspectivesPanel({}: PerspectivesPanelProps) {
   const tasks = useAppStore(s => s.tasks);
   const perspectives = useAppStore(s => s.perspectives);
-  const contexts = useAppStore(s => s.contexts);
   const tags = useAppStore(s => s.tags);
-  const projects = useAppStore(s => s.projects);
-  const toggleTask = useAppStore(s => s.toggleTask);
-  const deleteTask = useAppStore(s => s.deleteTask);
   const setPerspectives = useAppStore(s => s.setPerspectives);
   const [activePerspectiveId, setActivePerspectiveId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);

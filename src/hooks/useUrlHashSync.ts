@@ -1,15 +1,7 @@
 import { useEffect } from 'react';
 import LZString from 'lz-string';
-import { useAppStore } from '@/store';
 
 export function useUrlHashSync() {
-  const setTasks = useAppStore(s => s.setTasks);
-  const setTags = useAppStore(s => s.setTags);
-  const setProjects = useAppStore(s => s.setProjects);
-  const setChecklists = useAppStore(s => s.setChecklists);
-  const setContexts = useAppStore(s => s.setContexts);
-  const setPerspectives = useAppStore(s => s.setPerspectives);
-  const setTheme = useAppStore(s => s.setTheme);
 
   useEffect(() => {
     const processHashSync = () => {

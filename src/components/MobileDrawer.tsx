@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import type { Task, Project, Context } from '@/types';
+import type { Task } from '@/types';
 import { cn } from '@/lib/utils';
 import { CalendarPanel } from './CalendarPanel';
 import { QuadrantPanel } from './QuadrantPanel';
@@ -16,35 +16,10 @@ interface MobileDrawerProps {
   onToggleTask: (id: string) => void;
   onUpdateQuadrant: (id: string, importance: 'important' | 'normal', urgency: 'urgent' | 'normal') => void;
   onSelectDate: (date: string) => void;
-  // Sidebar props
-  onChangeView?: (view: string) => void;
-  filterTag?: string | null;
-  onFilterTag?: (tag: string | null) => void;
-  filterContext?: string[];
-  onFilterContext?: (context: string[]) => void;
-  filterProject?: string | null;
-  onFilterProject?: (project: string | null) => void;
-  completedToday?: number;
-  onOpenPomodoro?: () => void;
-  isDark?: boolean;
-  onToggleTheme?: () => void;
-  tags?: Record<string, { label: string; color: string }>;
-  onUpdateTags?: (tags: Record<string, { label: string; color: string }>) => void;
-  projects?: Project[];
-  onUpdateProjects?: (projects: Project[]) => void;
-  contexts?: Context[];
-  onUpdateContexts?: (contexts: Context[]) => void;
-  onOpenSync?: () => void;
-  onOpenAI?: () => void;
-  onOpenThemeSettings?: () => void;
-  onOpenNotificationSettings?: () => void;
 }
 
 export function MobileDrawer({
   isOpen, onClose, type, tasks, selectedDate, view, onToggleTask, onUpdateQuadrant, onSelectDate,
-  onChangeView, filterTag, onFilterTag, filterProject, onFilterProject,
-  filterContext, onFilterContext, tags, projects, contexts,
-  onUpdateProjects, onUpdateTags, onUpdateContexts,
 }: MobileDrawerProps) {
   const isSidebar = type === 'sidebar';
 
@@ -114,16 +89,9 @@ export function MobileDrawer({
           {type === 'countdown' && (
             <CountdownPanel tasks={tasks} onToggleTask={onToggleTask} onOpenEdit={() => {}} />
           )}
-          {type === 'sidebar' && onChangeView && (
+          {type === 'sidebar' && (
             <div className="lg:hidden">
-              <Sidebar
-                view={(view as string) || 'today'}
-                onChangeView={(v) => { onChangeView(v); }}
-                tags={tags} filterTag={filterTag} onFilterTag={onFilterTag}
-                projects={projects} filterProject={filterProject} onFilterProject={onFilterProject}
-                contexts={contexts} filterContext={filterContext} onFilterContext={onFilterContext}
-                onUpdateProjects={onUpdateProjects} onUpdateTags={onUpdateTags} onUpdateContexts={onUpdateContexts}
-              />
+              <Sidebar />
             </div>
           )}
         </div>

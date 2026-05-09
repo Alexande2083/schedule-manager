@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { format, parseISO, differenceInDays, subDays } from 'date-fns';
 import { CheckCircle2, AlertTriangle, Clock, RotateCcw, Trash2, Eye } from 'lucide-react';
-import type { Task, Checklist, Project } from '@/types';
+import type { Task } from '@/types';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 

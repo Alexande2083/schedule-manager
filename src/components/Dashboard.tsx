@@ -5,7 +5,7 @@ import {
   Sun, Moon, Cloud, Zap, ArrowRight, Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Task, DisplayMode } from '@/types';
+import type { Task } from '@/types';
 import { format, parseISO } from 'date-fns';
 import { AddTaskInput } from './AddTaskInput';
 import { TaskItem } from './TaskItem';
@@ -43,9 +43,7 @@ export const Dashboard = memo(function Dashboard({
   const onToggleTask = useAppStore(s => s.toggleTask);
   const onDeleteTask = useAppStore(s => s.deleteTask);
   const onEditTask = useAppStore(s => s.editTask);
-  const onEditFullTask = useAppStore(s => s.editFullTask);
   const onAddTask = useAppStore(s => s.addTask);
-  const onReorderTasks = useAppStore(s => s.reorderTasks);
   const tags = useAppStore(s => s.tags);
   const projects = useAppStore(s => s.projects);
   const contexts = useAppStore(s => s.contexts);

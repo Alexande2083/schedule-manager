@@ -68,8 +68,6 @@ function App() {
   const setTheme = useAppStore(s => s.setTheme);
   const undo = useAppStore(s => s.undo);
 
-  const todayStr = getToday();
-
   // ─── Cloud sync ───
   const syncData = useMemo(() => ({
     tasks, projects, checklists, contexts, perspectives, tags,
