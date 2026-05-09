@@ -176,9 +176,131 @@ export const Dashboard = memo(function Dashboard({
         </div>
       </div>
 
-      {/* ── Row: Auto Planner + Time Blocks ── */}
+      {/* ── Row 1: Task List (primary) + Calendar sidebar ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Tasks — 2/3 width */}
+        <div className="xl:col-span-2 card" style={{ padding: 'var(--space-6)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg">所有任务</h2>
+              <p className="text-xs text-[var(--color-text-muted)]">{pendingTasks.length} pending · {completedTasks.length} completed</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center bg-[var(--color-bg)] rounded-btn border border-[var(--color-border)] p-0.5">
+                  <button onClick={() => onChangeDisplayMode('list')}
+                    className={cn('px-3 py-1.5 rounded-btn text-xs font-medium transition-colors duration-fast',
+                      displayMode === 'list' ? 'bg-[var(--color-brand)] text-white' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]')}>
+                    <List size={12} className="inline mr-1" />列表
+                  </button>
+                  <button onClick={() => onChangeDisplayMode('gantt')}
+                    className={cn('px-3 py-1.5 rounded-btn text-xs font-medium transition-colors duration-fast',
+                      displayMode === 'gantt' ? 'bg-[var(--color-brand)] text-white' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]')}>
+                    <BarChart3 size={12} className="inline mr-1" />甘特图
+                  </button>
+                </div>
+            </div>
+          </div>
+
+          {/* Tag filter */}
+          {Object.keys(tags).length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-4">
+              {Object.entries(tags).map(([key, tag]) => (
+                <button key={key} onClick={() => onFilterTag(filterTag === key ? null : key)}
+                  className={cn('badge transition-colors duration-fast',
+                    filterTag === key ? 'text-white' : 'bg-[var(--color-bg)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]')}
+                  style={filterTag === key ? { background: tag.color } : undefined}>
+                  {tag.label}
+                </button>
+              ))}
+              {filterTag && (
+                <button onClick={() => onFilterTag(null)} className="badge bg-[var(--color-bg)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+                  × 清除
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Add Task */}
+          {!showGantt && <div className="mb-4"><AddTaskInput selectedDate={selectedDate} tags={tags} projects={projects} contexts={contexts} templates={templates} onAdd={onAddTask} /></div>}
+
+          {/* Task List */}
+          {showGantt ? (
+            <GanttChart tasks={tasks} projects={projects} selectedDate={selectedDate} onOpenEdit={onOpenEdit} onReorderProjects={onReorderProjects} />
+          ) : rootTasks.length === 0 ? (
+            <div className="py-12 text-center">
+              <CheckCircle2 size={32} className="mx-auto mb-3 text-[var(--color-text-muted)]" />
+              <p className="text-sm text-[var(--color-text-secondary)]">暂无任务</p>
+              <p className="text-xs text-[var(--color-text-muted)] mt-1">在上方输入框添加今天的任务</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {rootTasks.map(task => (
+                <div key={task.id} className="animate-fade-in">
+                  <TaskItem
+                    task={task} tags={tags} projects={projects} contexts={contexts} allTasks={filteredTasks}
+                    onToggle={onToggleTask} onDelete={onDeleteTask} onEdit={onEditTask}
+                    onOpenEdit={onOpenEdit} getChildTasks={getChildTasks}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right sidebar: Calendar + Weather */}
+        <div className="space-y-4">
+          <div className="card overflow-hidden" style={{ padding: 0 }}>
+            <WeatherTimeWidget />
+          </div>
+          <div className="card" style={{ padding: 'var(--space-4)' }}>
+            <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">日历</h2>
+            <CalendarPanel tasks={tasks} selectedDate={selectedDate} onSelectDate={onSelectDate} tags={tags} />
+          </div>
+          {/* Compact time blocks */}
+          <div className="card" style={{ padding: 'var(--space-4)' }}>
+            <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <Clock size={13} className="text-[var(--color-brand)]" />时间安排
+            </h2>
+            <div className="space-y-3">
+              {timeBlocks.map((block, idx) => {
+                const Icon = block.icon;
+                const colors: Record<string, string> = {
+                  amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                  sky: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
+                  indigo: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+                };
+                return (
+                  <div key={block.label} className="flex gap-2">
+                    <div className="flex flex-col items-center gap-1">
+                      <div className={cn('w-7 h-7 rounded-btn flex items-center justify-center border', colors[block.color])}>
+                        <Icon size={13} />
+                      </div>
+                      {idx < 2 && <div className="w-px flex-1 bg-[var(--color-border)]" />}
+                    </div>
+                    <div className="flex-1 pb-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-[var(--color-text)]">{block.label}</span>
+                        <span className="text-[11px] text-[var(--color-text-muted)]">{block.range}</span>
+                      </div>
+                      {block.tasks.length > 0 ? block.tasks.slice(0, 3).map(t => (
+                        <div key={t.id} className="flex items-center gap-1.5 px-2 py-1 rounded-sm text-[11px] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors duration-fast">
+                          <span className="w-1 h-1 rounded-full" style={{ background: tags[t.tag]?.color || '#6366f1' }} />
+                          <span className="truncate flex-1">{t.title}</span>
+                          <span className="text-[var(--color-text-muted)]">{t.time}</span>
+                        </div>
+                      )) : <p className="text-[11px] text-[var(--color-text-muted)]">—</p>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Row 2: Auto Planner + Charts ── */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Auto Planner (Level 1) — Today only */}
+        {/* Auto Planner + Smart Scheduler + Weekly Plan */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div className="p-6">
             <DailyAutoPanel
@@ -190,7 +312,6 @@ export const Dashboard = memo(function Dashboard({
             />
           </div>
 
-          {/* ── Inline Smart Scheduler + Weekly Plan ── */}
           <div className="border-t border-[var(--color-border)] px-6 py-4 space-y-3">
               {/* Scheduler */}
               <div className="rounded-card border border-[var(--color-border)] p-4"
@@ -208,7 +329,7 @@ export const Dashboard = memo(function Dashboard({
                   <button
                     onClick={handleRunScheduler}
                     disabled={schedulerLoading || pendingTodayCount === 0}
-                    className="px-3 py-1.5 rounded text-[10px] font-medium text-white transition-colors duration-fast"
+                    className="px-3 py-1.5 rounded text-[10px] font-medium text-white transition-colors duration-fast shrink-0"
                     style={{ background: schedulerLoading ? '#86d6a0' : '#22c55e' }}
                   >
                     {schedulerLoading ? '分析中...' : `排程 (${pendingTodayCount})`}
@@ -280,144 +401,21 @@ export const Dashboard = memo(function Dashboard({
             </div>
         </div>
 
-        {/* Time Blocks + Weather + Calendar (Level 2) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Time Blocks */}
+        {/* Right: Charts */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 content-start">
           <div className="card" style={{ padding: 'var(--space-4)' }}>
-            <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              <Clock size={13} className="text-[var(--color-brand)]" />时间安排
-            </h2>
-            <div className="space-y-3">
-              {timeBlocks.map((block, idx) => {
-                const Icon = block.icon;
-                const colors: Record<string, string> = {
-                  amber: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-                  sky: 'bg-sky-500/10 text-sky-400 border-sky-500/20',
-                  indigo: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-                };
-                return (
-                  <div key={block.label} className="flex gap-2">
-                    <div className="flex flex-col items-center gap-1">
-                      <div className={cn('w-7 h-7 rounded-btn flex items-center justify-center border', colors[block.color])}>
-                        <Icon size={13} />
-                      </div>
-                      {idx < 2 && <div className="w-px flex-1 bg-[var(--color-border)]" />}
-                    </div>
-                    <div className="flex-1 pb-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-[var(--color-text)]">{block.label}</span>
-                        <span className="text-[11px] text-[var(--color-text-muted)]">{block.range}</span>
-                      </div>
-                      {block.tasks.length > 0 ? block.tasks.slice(0, 3).map(t => (
-                        <div key={t.id} className="flex items-center gap-1.5 px-2 py-1 rounded-sm text-[11px] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors duration-fast">
-                          <span className="w-1 h-1 rounded-full" style={{ background: tags[t.tag]?.color || '#6366f1' }} />
-                          <span className="truncate flex-1">{t.title}</span>
-                          <span className="text-[var(--color-text-muted)]">{t.time}</span>
-                        </div>
-                      )) : <p className="text-[11px] text-[var(--color-text-muted)]">—</p>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">完成趋势</p>
+            <TaskTrendChart tasks={tasks} embedded />
           </div>
-
-          {/* Weather */}
-          <div className="card overflow-hidden" style={{ padding: 0 }}>
-            <WeatherTimeWidget />
+          <div className="card" style={{ padding: 'var(--space-4)' }}>
+            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">完成统计</p>
+            <CompletionStatsPanel tasks={filteredTasks} projects={projects} />
           </div>
-
-          {/* Calendar — full width on small */}
-          <div className="card sm:col-span-2" style={{ padding: 'var(--space-4)' }}>
-            <h2 className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">日历</h2>
-            <CalendarPanel tasks={tasks} selectedDate={selectedDate} onSelectDate={onSelectDate} tags={tags} />
+          <div className="card" style={{ padding: 'var(--space-4)' }}>
+            <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">活跃热力图</p>
+            <HeatmapPanel tasks={tasks} compact />
           </div>
         </div>
-      </div>
-
-      {/* ── Row: Analytics (Level 2) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="card" style={{ padding: 'var(--space-4)' }}>
-          <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">完成趋势</p>
-          <TaskTrendChart tasks={tasks} embedded />
-        </div>
-        <div className="card" style={{ padding: 'var(--space-4)' }}>
-          <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">完成统计</p>
-          <CompletionStatsPanel tasks={filteredTasks} projects={projects} />
-        </div>
-        <div className="card" style={{ padding: 'var(--space-4)' }}>
-          <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">活跃热力图</p>
-          <HeatmapPanel tasks={tasks} compact />
-        </div>
-      </div>
-
-      {/* ── Tasks (Level 1) ── */}
-      <div className="card" style={{ padding: 'var(--space-6)' }}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg">所有任务</h2>
-            <p className="text-xs text-[var(--color-text-muted)]">{pendingTasks.length} pending · {completedTasks.length} completed</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-[var(--color-bg)] rounded-btn border border-[var(--color-border)] p-0.5">
-                <button onClick={() => onChangeDisplayMode('list')}
-                  className={cn('px-3 py-1.5 rounded-btn text-xs font-medium transition-colors duration-fast',
-                    displayMode === 'list' ? 'bg-[var(--color-brand)] text-white' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]')}>
-                  <List size={12} className="inline mr-1" />列表
-                </button>
-                <button onClick={() => onChangeDisplayMode('gantt')}
-                  className={cn('px-3 py-1.5 rounded-btn text-xs font-medium transition-colors duration-fast',
-                    displayMode === 'gantt' ? 'bg-[var(--color-brand)] text-white' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]')}>
-                  <BarChart3 size={12} className="inline mr-1" />甘特图
-                </button>
-              </div>
-          </div>
-        </div>
-
-        {/* Tag filter */}
-        {Object.keys(tags).length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-4">
-            {Object.entries(tags).map(([key, tag]) => (
-              <button key={key} onClick={() => onFilterTag(filterTag === key ? null : key)}
-                className={cn('badge transition-colors duration-fast',
-                  filterTag === key ? 'text-white' : 'bg-[var(--color-bg)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]')}
-                style={filterTag === key ? { background: tag.color } : undefined}>
-                {tag.label}
-              </button>
-            ))}
-            {filterTag && (
-              <button onClick={() => onFilterTag(null)} className="badge bg-[var(--color-bg)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
-                × 清除
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Add Task */}
-        {!showGantt && <div className="mb-4"><AddTaskInput selectedDate={selectedDate} tags={tags} projects={projects} contexts={contexts} templates={templates} onAdd={onAddTask} /></div>}
-
-        {/* Task List */}
-        {showGantt ? (
-          <GanttChart tasks={tasks} projects={projects} selectedDate={selectedDate} onOpenEdit={onOpenEdit} onReorderProjects={onReorderProjects} />
-        ) : rootTasks.length === 0 ? (
-          <div className="py-12 text-center">
-            <CheckCircle2 size={32} className="mx-auto mb-3 text-[var(--color-text-muted)]" />
-            <p className="text-sm text-[var(--color-text-secondary)]">暂无任务</p>
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">在上方输入框添加今天的任务</p>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {rootTasks.map(task => (
-              <div key={task.id} className="animate-fade-in">
-                <TaskItem
-                  task={task} tags={tags} projects={projects} contexts={contexts} allTasks={filteredTasks}
-                  onToggle={onToggleTask} onDelete={onDeleteTask} onEdit={onEditTask}
-                  onOpenEdit={onOpenEdit} getChildTasks={getChildTasks}
-                />
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

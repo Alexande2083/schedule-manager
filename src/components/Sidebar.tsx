@@ -45,7 +45,7 @@ export function Sidebar({ onOpenSettings }: SidebarProps) {
   const [newItem, setNewItem] = useState<{ type: string; value: string } | null>(null);
 
   const baseItemClass = "flex items-center gap-2 w-full px-3 py-2 rounded-btn text-sm font-medium transition-all duration-fast text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text)]";
-  const activeClass = "bg-[var(--color-brand-ghost)] text-[var(--color-brand)] hover:bg-[var(--color-brand-ghost)] hover:text-[var(--color-brand)]";
+  const activeClass = "bg-[var(--color-brand-ghost)] text-[var(--color-brand)] font-semibold hover:bg-[var(--color-brand-ghost)] hover:text-[var(--color-brand)]";
 
   return (
     <div className="flex flex-col h-full px-3 py-4" style={{ background: 'var(--color-bg)' }}>
