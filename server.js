@@ -7,6 +7,7 @@ import { dirname, join } from 'path';
 import { initDb, getDb, saveDb, rowToTask, rowsToTasks } from './db.js';
 import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
 import crypto from 'crypto';
+import { extractText } from './utils/text-extract.js';
 
 dotenv.config();
 
@@ -662,13 +663,16 @@ app.post('/api/upload', async (req, res) => {
     const buffer = Buffer.from(content, 'base64');
     writeFileSync(filePath, buffer);
 
+    // Extract text content from PDF/DOCX/TXT
+    const textContent = await extractText(filePath, mimeType, name);
+
     // Store metadata in DB
     const db = getDb();
-    db.run(`INSERT OR REPLACE INTO files (id, user_id, original_name, mime_type, size, storage_path) VALUES (?, ?, ?, ?, ?, ?)`,
-      [id, DEFAULT_USER_ID, name, mimeType || 'application/octet-stream', buffer.length, `${id}/${safeName}`]);
+    db.run(`INSERT OR REPLACE INTO files (id, user_id, original_name, mime_type, size, storage_path, text_content) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, DEFAULT_USER_ID, name, mimeType || 'application/octet-stream', buffer.length, `${id}/${safeName}`, textContent || null]);
     saveDb();
 
-    res.json({ id, url: `/api/uploads/${id}/${safeName}`, name, size: buffer.length });
+    res.json({ id, url: `/api/uploads/${id}/${safeName}`, name, size: buffer.length, textExtracted: !!textContent });
   } catch (err) {
     console.error('❌ POST /api/upload 错误:', err.message);
     res.status(500).json({ error: err.message || '上传失败' });
@@ -730,6 +734,49 @@ app.delete('/api/uploads/:id', (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message || '删除失败' });
+  }
+});
+
+// Search uploaded file contents
+app.get('/api/uploads/search', (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q) return res.json([]);
+    const db = getDb();
+    const rows = execToObjects(db,
+      `SELECT id, original_name, mime_type, size, created_at FROM files WHERE user_id = ? AND text_content IS NOT NULL AND text_content LIKE ? ORDER BY created_at DESC LIMIT 30`,
+      [DEFAULT_USER_ID, `%${q}%`]);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message || '搜索失败' });
+  }
+});
+
+// Download file by ID (resolves filename from DB)
+app.get('/api/uploads/:id/download', (req, res) => {
+  try {
+    const db = getDb();
+    const rows = execToObjects(db, `SELECT storage_path, mime_type FROM files WHERE id = ?`, [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: '文件不存在' });
+    const filePath = join(UPLOAD_DIR, rows[0].storage_path);
+    if (!filePath.startsWith(UPLOAD_DIR)) return res.status(403).json({ error: '非法路径' });
+    if (!existsSync(filePath)) return res.status(404).json({ error: '文件不存在' });
+    if (rows[0].mime_type) res.setHeader('Content-Type', rows[0].mime_type);
+    res.sendFile(filePath);
+  } catch (err) {
+    res.status(500).json({ error: err.message || '读取失败' });
+  }
+});
+
+// Get file content text
+app.get('/api/uploads/:id/content', (req, res) => {
+  try {
+    const db = getDb();
+    const rows = execToObjects(db, `SELECT text_content FROM files WHERE id = ?`, [req.params.id]);
+    if (rows.length === 0) return res.status(404).json({ error: '文件不存在' });
+    res.json({ text: rows[0].text_content || '' });
+  } catch (err) {
+    res.status(500).json({ error: err.message || '读取失败' });
   }
 });
 

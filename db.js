@@ -137,9 +137,13 @@ export async function initDb() {
       mime_type TEXT,
       size INTEGER DEFAULT 0,
       storage_path TEXT NOT NULL,
+      text_content TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
+
+  // Migration: add text_content column if missing
+  try { db.run(`ALTER TABLE files ADD COLUMN text_content TEXT`); } catch { /* already exists */ }
 
   saveDb();
   return db;

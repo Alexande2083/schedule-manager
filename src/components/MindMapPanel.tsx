@@ -3,7 +3,7 @@ import {
   Plus, Download, ChevronDown, Trash2, Copy,
   ZoomIn, ZoomOut, Maximize, Sparkles, ListChecks,
   Target, Bug, FileText, Link2, Bookmark, Zap,
-  ExternalLink, Image, File, X, Paperclip, Upload,
+  ExternalLink, Image, File, X, Paperclip, Upload, Search,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
@@ -158,6 +158,9 @@ export function MindMapPanel({}: MindMapPanelProps) {
   const [showDetail, setShowDetail] = useState(false);
   const [attachUrl, setAttachUrl] = useState('');
   const [themeKey, setThemeKey] = useState<keyof typeof THEMES>('light');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -521,6 +524,44 @@ export function MindMapPanel({}: MindMapPanelProps) {
                 title={k}
               />
             ))}
+            {/* File content search */}
+            <div className="relative flex items-center">
+              <input
+                value={searchQuery}
+                onChange={async e => {
+                  const v = e.target.value;
+                  setSearchQuery(v);
+                  if (!v.trim()) { setSearchResults([]); return; }
+                  setSearching(true);
+                  try {
+                    const res = await fetch(`/api/uploads/search?q=${encodeURIComponent(v.trim())}`);
+                    if (res.ok) setSearchResults(await res.json());
+                  } catch { setSearchResults([]); }
+                  setSearching(false);
+                }}
+                placeholder="搜文件内容..."
+                className="w-24 text-[10px] bg-[var(--app-surface-hover)] rounded px-2 py-1 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:w-40 transition-all placeholder:text-[var(--app-text-muted)]"
+              />
+              {searching && <Search size={12} className="absolute right-2 text-[var(--app-text-muted)] animate-pulse" />}
+              {searchResults.length > 0 && (
+                <div className="absolute top-full right-0 mt-1 w-64 bg-[var(--app-surface)] border border-[var(--app-border)] rounded-xl shadow-lg overflow-hidden z-50 max-h-48 overflow-y-auto">
+                  {searchResults.map(r => (
+                    <button key={r.id}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-[11px] text-[var(--app-text)] hover:bg-[var(--app-surface-hover)] transition-colors border-b border-[var(--app-border)] last:border-0 text-left"
+                      onClick={() => {
+                        setSearchResults([]); setSearchQuery('');
+                        window.open(`/api/uploads/${r.id}/download`, '_blank');
+                      }}>
+                      <File size={12} className="shrink-0 text-[var(--app-text-muted)]" />
+                      <span className="truncate">{r.original_name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {searchQuery && !searching && searchResults.length === 0 && (
+                <span className="absolute right-2 text-[9px] text-[var(--app-text-muted)]">无结果</span>
+              )}
+            </div>
             <div className="w-px h-5 bg-[var(--app-border)] mx-1" />
             <button onClick={zoomIn} className="p-1.5 rounded-lg hover:bg-[var(--app-surface-hover)] text-[var(--app-text-muted)] hover:text-[var(--app-text)]" title="放大"><ZoomIn size={16} /></button>
             <span className="text-[11px] text-[var(--app-text-muted)] tabular-nums w-10 text-center">{Math.round(scale * 100)}%</span>
