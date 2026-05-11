@@ -40,7 +40,7 @@ export interface TagStats {
 export interface Insights {
   timeSlotStats: TimeSlotStats;
   tagStats: TagStats;
-  weeklyTrend: number[];
+  weeklyTrend: { day: string; value: number }[];
   optimizationTips: string[];
   profile: UserProfile;
 }
@@ -155,21 +155,24 @@ export function useLearningSystem(tasks: Task[]) {
     return result;
   }, [tasks]);
 
-  // ─── Weekly Trend (last 8 weeks) ───
-  const weeklyTrend = useMemo((): number[] => {
-    const weeks: number[] = [];
+  // ─── Weekly Trend (this week's daily completion) ───
+  const weeklyTrend = useMemo((): { day: string; value: number }[] => {
     const todayDate = new Date();
+    const mon = startOfWeek(todayDate, { weekStartsOn: 1 });
+    const dayNames = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
-    for (let w = 7; w >= 0; w--) {
-      const weekStart = subWeeks(startOfWeek(todayDate, { weekStartsOn: 1 }), w);
-      const weekEnd = subWeeks(startOfWeek(todayDate, { weekStartsOn: 1 }), w - 1);
+    return dayNames.map((day, i) => {
+      const dayStart = new Date(mon);
+      dayStart.setDate(mon.getDate() + i);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayStart.getDate() + 1);
       const count = taskLogs.filter(log => {
         const logDate = new Date(log.completedAt);
-        return logDate >= weekStart && logDate < weekEnd;
+        return logDate >= dayStart && logDate < dayEnd;
       }).length;
-      weeks.push(count);
-    }
-    return weeks;
+      return { day, value: count };
+    });
   }, [taskLogs]);
 
   // ─── User Profile ───
@@ -248,12 +251,13 @@ export function useLearningSystem(tasks: Task[]) {
       tips.push(`你已经连续完成 ${profile.streakDays} 天任务，保持势头！`);
     }
 
-    if (weeklyTrend.length >= 2) {
-      const lastTwoWeeks = weeklyTrend.slice(-2);
-      if (lastTwoWeeks[0] > lastTwoWeeks[1]) {
-        tips.push('近一周完成量有所下降，可以回顾本周目标是否合理。');
-      } else {
-        tips.push('近一周完成量在上升，继续保持！');
+    if (weeklyTrend.length >= 4) {
+      const firstHalf = weeklyTrend.slice(0, 3).reduce((s, d) => s + d.value, 0);
+      const secondHalf = weeklyTrend.slice(-3).reduce((s, d) => s + d.value, 0);
+      if (secondHalf < firstHalf) {
+        tips.push('本周后几天完成量有所下降，可以回顾目标是否合理。');
+      } else if (secondHalf > firstHalf) {
+        tips.push('本周完成量在上升，继续保持！');
       }
     }
 

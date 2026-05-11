@@ -23,8 +23,6 @@ const item = {
 export function UserInsights({ insights }: UserInsightsProps) {
   const { profile, timeSlotStats, tagStats, weeklyTrend, optimizationTips } = insights;
 
-  const maxTrend = Math.max(...weeklyTrend, 1);
-
   const slotIcon = (slot: TimeSlot) => {
     if (slot === 'morning') return <Sun size={16} />;
     if (slot === 'afternoon') return <Cloud size={16} />;
@@ -175,20 +173,38 @@ export function UserInsights({ insights }: UserInsightsProps) {
             <TrendingUp size={14} className="text-emerald-500" />
             周完成趋势
           </h3>
-          {/* Mini bar chart */}
-          <div className="flex items-end gap-1.5 h-36 mb-4">
-            {weeklyTrend.map((count, idx) => (
-              <div key={idx} className="flex-1 flex flex-col items-center gap-1">
-                <div
-                  className={cn(
-                    'w-full rounded-sm transition-all duration-300',
-                    idx === weeklyTrend.length - 1 ? 'bg-gradient-to-t from-[var(--app-accent)] to-[var(--app-accent)]/60' : 'bg-[var(--color-bg-active)]'
-                  )}
-                  style={{ height: `${Math.max((count / maxTrend) * 100, count > 0 ? 8 : 3)}%` }}
-                />
-                <span className="text-[8px] text-[var(--app-text-muted)]">{count}</span>
-              </div>
-            ))}
+          {/* Bar chart */}
+          <div className="relative mb-4">
+            {/* Y-axis labels */}
+            <div className="absolute left-0 top-0 bottom-5 w-6 flex flex-col justify-between text-[8px] text-[var(--app-text-muted)] leading-none">
+              {weeklyTrend.length > 0 && (() => {
+                const maxVal = Math.max(...weeklyTrend.map(d => d.value), 1);
+                const steps = Math.min(maxVal, 4);
+                return Array.from({ length: steps + 1 }, (_, i) => (
+                  <span key={i}>{Math.round((maxVal / steps) * (steps - i))}</span>
+                ));
+              })()}
+            </div>
+            {/* Bars */}
+            <div className="flex items-end gap-1 pl-7 h-32">
+              {weeklyTrend.map((item, idx) => {
+                const maxVal = Math.max(...weeklyTrend.map(d => d.value), 1);
+                const barHeight = item.value > 0 ? Math.round((item.value / maxVal) * 100) : 0;
+                return (
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                    <span className="text-[9px] font-medium tabular-nums text-[var(--app-text-secondary)]">{item.value}</span>
+                    <div
+                      className={cn(
+                        'w-full rounded-sm transition-all duration-300',
+                        idx >= 5 ? 'bg-gradient-to-t from-[var(--app-accent)] to-[var(--app-accent)]/50' : 'bg-[var(--color-bg-active)]'
+                      )}
+                      style={{ height: `${barHeight}%`, minHeight: item.value > 0 ? '4px' : '2px' }}
+                    />
+                    <span className="text-[8px] text-[var(--app-text-muted)] whitespace-nowrap">{item.day}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Optimization Tips */}

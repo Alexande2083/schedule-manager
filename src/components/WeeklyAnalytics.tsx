@@ -24,7 +24,7 @@ interface WeeklyAnalyticsProps {
     profile: import('@/hooks/useLearningSystem').UserProfile;
     timeSlotStats: import('@/hooks/useLearningSystem').TimeSlotStats;
     tagStats: import('@/hooks/useLearningSystem').TagStats;
-    weeklyTrend: number[];
+    weeklyTrend: { day: string; value: number }[];
     optimizationTips: string[];
     generateWeeklyPlan: (goal: string) => WeeklyPlanData;
     generateSmartSchedule: (date: string) => ScheduledTask[];
@@ -112,10 +112,9 @@ export function WeeklyAnalytics({
 
   // ─── Module 4: Productivity Trends ───
   const trendData = useMemo(() => {
-    // Last 8 weeks → labels + data
-    return learning.weeklyTrend.map((v, i) => ({
-      label: `W${i + 1}`,
-      value: v,
+    return learning.weeklyTrend.map(d => ({
+      label: d.day,
+      value: d.value,
     }));
   }, [learning.weeklyTrend]);
 
