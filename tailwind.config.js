@@ -61,6 +61,9 @@ module.exports = {
         lg: "var(--radius-card)",
         md: "var(--radius-btn)",
       },
+      backgroundImage: {
+        'brand-gradient': 'var(--color-brand-gradient)',
+      },
       boxShadow: {
         xs: "var(--shadow-xs)",
         sm: "var(--shadow-sm)",

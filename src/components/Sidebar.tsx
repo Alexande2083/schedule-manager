@@ -51,7 +51,7 @@ export function Sidebar({ onOpenSettings }: SidebarProps) {
       {/* Logo */}
       <div className="px-3 mb-6">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-btn flex items-center justify-center" style={{ background: 'var(--color-brand)' }}>
+          <div className="w-7 h-7 rounded-btn flex items-center justify-center" style={{ background: 'var(--color-brand-gradient)' }}>
             <LayoutDashboard size={15} className="text-white" />
           </div>
           <span className="text-sm font-semibold text-[var(--color-text)] tracking-tight">Schedule</span>
