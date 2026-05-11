@@ -181,8 +181,8 @@ export function DataSyncPanel({ isOpen, onClose, currentData, onImport }: DataSy
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)] backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[var(--app-surface)] rounded-2xl shadow-2xl w-[480px] max-w-[92vw] max-h-[85vh] flex flex-col border border-[var(--app-border)]" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)]" onClick={onClose}>
+      <div className="bg-[var(--app-surface)] rounded-xl shadow-2xl w-[480px] max-w-[92vw] max-h-[85vh] flex flex-col border border-[var(--app-border)]" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <div className="flex items-center gap-2">

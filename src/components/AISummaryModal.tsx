@@ -173,9 +173,9 @@ ${taskList}
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)] backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)]" onClick={onClose}>
       <div
-        className="bg-[var(--app-surface)] rounded-2xl shadow-2xl w-[560px] max-w-[92vw] max-h-[85vh] flex flex-col border border-[var(--app-border)]"
+        className="bg-[var(--app-surface)] rounded-xl shadow-2xl w-[560px] max-w-[92vw] max-h-[85vh] flex flex-col border border-[var(--app-border)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

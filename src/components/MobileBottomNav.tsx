@@ -16,7 +16,7 @@ export function MobileBottomNav({ view, onChangeView, onOpenPomodoro, onOpenSett
   ];
 
   return (
-    <div className="glass-toolbar flex items-center justify-around bg-[var(--app-surface)] rounded-2xl border border-[var(--app-border)] py-1.5 px-2 mx-1 mb-1">
+    <div className="flex items-center justify-around bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] py-1.5 px-2 mx-1 mb-1">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive = view === item.id;

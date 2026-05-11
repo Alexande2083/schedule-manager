@@ -176,8 +176,8 @@ export function PerspectivesPanel({}: PerspectivesPanelProps) {
 
           {/* Create Perspective Modal */}
           {showCreate && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)] backdrop-blur-sm" onClick={() => setShowCreate(false)}>
-              <div className="bg-[var(--app-surface)] rounded-2xl shadow-2xl w-[420px] max-h-[80vh] flex flex-col border border-[var(--app-border)]" onClick={e => e.stopPropagation()}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)]" onClick={() => setShowCreate(false)}>
+              <div className="bg-[var(--app-surface)] rounded-xl shadow-2xl w-[420px] max-h-[80vh] flex flex-col border border-[var(--app-border)]" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between p-5 border-b border-[var(--app-border)]">
                   <h3 className="text-base font-semibold text-[var(--app-text)]">新建透视</h3>
                   <button onClick={() => setShowCreate(false)} className="p-1.5 rounded-lg text-[var(--app-text-muted)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)] transition-all">

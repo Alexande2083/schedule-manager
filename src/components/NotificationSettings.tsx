@@ -74,9 +74,9 @@ export function NotificationSettings({ isOpen, onClose }: NotificationSettingsPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)] backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)]" onClick={onClose}>
       <div
-        className="glass-panel bg-[var(--app-surface)] rounded-2xl shadow-2xl w-[480px] max-h-[92vh] flex flex-col border border-[var(--app-border)]"
+        className="glass-panel bg-[var(--app-surface)] rounded-xl shadow-2xl w-[480px] max-h-[92vh] flex flex-col border border-[var(--app-border)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

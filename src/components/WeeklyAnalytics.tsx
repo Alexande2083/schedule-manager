@@ -524,7 +524,7 @@ function Section({
 }) {
   return (
     <div
-      className={cn('rounded-2xl border overflow-hidden', noPad ? 'p-0' : 'p-4 md:p-5')}
+      className={cn('rounded-xl border overflow-hidden', noPad ? 'p-0' : 'p-4 md:p-5')}
       style={{
         background: 'var(--color-bg-raised)',
         borderColor: accent ? 'rgba(139,92,246,0.25)' : 'var(--color-border)',

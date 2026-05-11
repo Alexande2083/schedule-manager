@@ -193,8 +193,8 @@ export function PomodoroModal({
 
   // Normal mode: centered modal
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)] backdrop-blur-sm">
-      <div className="glass-panel bg-[var(--app-surface)] rounded-2xl shadow-2xl p-8 w-[380px] relative border border-[var(--app-border)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)]">
+      <div className="glass-panel bg-[var(--app-surface)] rounded-xl shadow-2xl p-8 w-[380px] relative border border-[var(--app-border)]">
         {modalContent}
       </div>
     </div>

@@ -37,7 +37,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     return (
       <div className="flex flex-col items-center justify-center min-h-[300px] p-8 text-center">
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+        <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-4"
           style={{ background: 'rgba(239,68,68,0.1)' }}>
           <AlertTriangle size={24} style={{ color: '#ef4444' }} />
         </div>

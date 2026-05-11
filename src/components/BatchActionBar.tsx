@@ -19,7 +19,7 @@ export function BatchActionBar({
   const allCompleted = selectedTasks.every(t => t.completed);
 
   return (
-    <div className="glass-panel fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 px-3 py-2 rounded-2xl border border-[var(--app-border)] bg-[var(--app-surface)] shadow-lg">
+    <div className="glass-panel fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 px-3 py-2 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface)] shadow-lg">
       <span className="text-xs text-[var(--app-text-muted)] px-2 shrink-0">
         已选 {selectedIds.length}
       </span>

@@ -21,7 +21,7 @@ const VIEW_LABELS: Record<string, string> = {
  */
 export function MobileHeader({ view, onOpenSidebar, onOpenRightPanel, completedToday }: MobileHeaderProps) {
   return (
-    <header className="flex items-center justify-between px-4 h-12 bg-[var(--app-surface)]/80 backdrop-blur-xl border-b border-[var(--app-border)]">
+    <header className="flex items-center justify-between px-4 h-12 bg-[var(--app-surface)] border-b border-[var(--app-border)]">
       {/* Left: Hamburger */}
       <button
         onClick={onOpenSidebar}

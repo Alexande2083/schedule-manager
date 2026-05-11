@@ -115,7 +115,7 @@ export function SyncFAB() {
     <div ref={ref} className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
       {/* Menu */}
       {open && (
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-raised)] shadow-lg animate-fade-in">
+        <div className="flex flex-col overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-raised)] shadow-lg animate-fade-in">
           <button
             onClick={handleUpload}
             disabled={loading !== 'idle'}

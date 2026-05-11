@@ -68,9 +68,9 @@ export function SearchModal({ isOpen, onClose, onOpenEdit, onSelectDate }: Searc
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-[var(--app-modal-overlay)] backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-[var(--app-modal-overlay)]" onClick={onClose}>
       <div
-        className="glass-panel bg-[var(--app-surface)] rounded-2xl shadow-2xl w-[560px] max-h-[70vh] flex flex-col border border-[var(--app-border)] overflow-hidden"
+        className="glass-panel bg-[var(--app-surface)] rounded-xl shadow-2xl w-[560px] max-h-[70vh] flex flex-col border border-[var(--app-border)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}

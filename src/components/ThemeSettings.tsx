@@ -74,8 +74,8 @@ export function ThemeSettings({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)] backdrop-blur-sm">
-      <div className="glass-panel bg-[var(--app-surface)] rounded-2xl shadow-2xl w-[420px] max-h-[80vh] flex flex-col border border-[var(--app-border)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--app-modal-overlay)]">
+      <div className="glass-panel bg-[var(--app-surface)] rounded-xl shadow-2xl w-[420px] max-h-[80vh] flex flex-col border border-[var(--app-border)]">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-[var(--app-border)]">
           <div className="flex items-center gap-2">

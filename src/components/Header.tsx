@@ -13,7 +13,7 @@ export function Header({
   title, subtitle, onOpenSearch, onOpenSettings, onOpenAI, onOpenSync,
 }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-30 bg-white/80 dark:bg-[#0f0f11]/80 backdrop-blur-xl border-b border-[var(--app-border)]">
+    <header className="sticky top-0 z-30 bg-white dark:bg-[var(--color-bg)] border-b border-[var(--app-border)]">
       <div className="flex items-center justify-between h-14 px-6">
         {/* Left: Title */}
         <div className="flex items-center gap-3">
