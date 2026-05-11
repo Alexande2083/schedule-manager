@@ -176,15 +176,15 @@ export function UserInsights({ insights }: UserInsightsProps) {
             周完成趋势
           </h3>
           {/* Mini bar chart */}
-          <div className="flex items-end gap-1.5 h-20 mb-4">
+          <div className="flex items-end gap-1.5 h-36 mb-4">
             {weeklyTrend.map((count, idx) => (
               <div key={idx} className="flex-1 flex flex-col items-center gap-1">
                 <div
                   className={cn(
                     'w-full rounded-sm transition-all duration-300',
-                    idx === weeklyTrend.length - 1 ? 'bg-[var(--app-accent)]' : 'bg-[var(--app-border)]'
+                    idx === weeklyTrend.length - 1 ? 'bg-gradient-to-t from-[var(--app-accent)] to-[var(--app-accent)]/60' : 'bg-[var(--color-bg-active)]'
                   )}
-                  style={{ height: `${(count / maxTrend) * 100}%`, minHeight: count > 0 ? '4px' : '2px' }}
+                  style={{ height: `${Math.max((count / maxTrend) * 100, count > 0 ? 8 : 3)}%` }}
                 />
                 <span className="text-[8px] text-[var(--app-text-muted)]">{count}</span>
               </div>
