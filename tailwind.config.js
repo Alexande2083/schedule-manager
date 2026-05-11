@@ -60,6 +60,7 @@ module.exports = {
         full: "var(--radius-full)",
         lg: "var(--radius-card)",
         md: "var(--radius-btn)",
+        xl: "var(--radius-card)",
       },
       backgroundImage: {
         'brand-gradient': 'var(--color-brand-gradient)',
