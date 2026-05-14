@@ -45,14 +45,14 @@ export function Sidebar({ onOpenSettings }: SidebarProps) {
   const activeClass = "bg-[var(--color-brand-ghost)] text-[var(--color-brand)] font-semibold hover:bg-[var(--color-brand-ghost)] hover:text-[var(--color-brand)]";
 
   return (
-    <div className="flex flex-col h-full px-3 py-4" style={{ background: 'var(--color-bg)' }}>
+    <div className="flex flex-col h-full w-40 px-2.5 py-4" style={{ background: 'var(--color-bg)' }}>
       {/* Logo */}
       <div className="px-3 mb-6">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-btn flex items-center justify-center" style={{ background: 'var(--color-brand-gradient)' }}>
             <LayoutDashboard size={15} className="text-white" />
           </div>
-          <span className="text-sm font-semibold text-[var(--color-text)] tracking-tight">Schedule</span>
+          <span className="text-sm font-semibold text-[var(--color-text)] tracking-tight">日程管理</span>
         </div>
       </div>
 
@@ -85,6 +85,7 @@ export function Sidebar({ onOpenSettings }: SidebarProps) {
           activeId={filterProject}
           onSelect={(id) => onFilterProject(id === filterProject ? null : id)}
           onDelete={(id) => setProjects(projects.filter(p => p.id !== id))}
+          onColorChange={(id, color) => setProjects(projects.map(p => p.id === id ? { ...p, color } : p))}
           onAdd={(label) => {
             setProjects([...projects, { id: crypto.randomUUID(), name: label, color: '#6366f1' }]);
           }}
@@ -150,6 +151,7 @@ export function Sidebar({ onOpenSettings }: SidebarProps) {
 function Section({
   icon: Icon, label, expanded, onToggle, items, activeId, activeIds, multiSelect,
   onSelect, onDelete, onAdd, newItem, setNewItem,
+  onColorChange,
 }: {
   icon: any; label: string; expanded: boolean; onToggle: () => void;
   items: { id: string; label: string; color: string }[];
@@ -158,21 +160,24 @@ function Section({
   onSelect?: (id: string) => void;
   onDelete?: (id: string) => void;
   onAdd?: (label: string) => void;
+  onColorChange?: (id: string, color: string) => void;
   newItem: { type: string; value: string } | null;
   setNewItem: (v: { type: string; value: string } | null) => void;
 }) {
   return (
     <div>
-      <button onClick={onToggle} className="flex items-center gap-2 w-full px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hover:text-[var(--color-text-secondary)] transition-colors duration-fast">
-        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        <Icon size={12} />
-        {label}
+      <div className="flex items-center gap-1 px-3 py-1.5">
+        <button onClick={onToggle} className="flex min-w-0 flex-1 items-center gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider hover:text-[var(--color-text-secondary)] transition-colors duration-fast">
+          {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          <Icon size={12} />
+          <span>{label}</span>
+        </button>
         {onAdd && (
-          <button onClick={(e) => { e.stopPropagation(); setNewItem({ type: label, value: '' }); }} className="ml-auto p-0.5 rounded hover:bg-[var(--color-bg-hover)]">
+          <button onClick={() => setNewItem({ type: label, value: '' })} className="p-0.5 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]">
             <Plus size={12} />
           </button>
         )}
-      </button>
+      </div>
       {expanded && (
         <div className="ml-2 space-y-0.5">
           {items.map(item => {
@@ -190,9 +195,23 @@ function Section({
                   <span className="truncate">{item.label}</span>
                 </button>
                 {onDelete && (
-                  <button onClick={() => onDelete(item.id)} className="p-1 opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-danger)] transition-all duration-fast">
-                    <X size={10} />
-                  </button>
+                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-fast">
+                    {onColorChange && (
+                      <label className="p-1 rounded text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] cursor-pointer">
+                        <input
+                          type="color"
+                          value={item.color}
+                          onChange={(e) => onColorChange(item.id, e.target.value)}
+                          className="sr-only"
+                          aria-label={`${item.label} 颜色`}
+                        />
+                        <span className="block w-2.5 h-2.5 rounded-full border border-[var(--color-border)]" style={{ backgroundColor: item.color }} />
+                      </label>
+                    )}
+                    <button onClick={() => onDelete(item.id)} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-danger)] transition-all duration-fast">
+                      <X size={10} />
+                    </button>
+                  </div>
                 )}
               </div>
             );

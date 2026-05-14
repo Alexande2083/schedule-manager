@@ -71,6 +71,7 @@ export interface Checklist {
   id: string;
   name: string;
   defaultTag: string;
+  bgColor?: string;
   order: number;
   archived: boolean;
 }

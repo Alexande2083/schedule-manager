@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import {
-  Plus, X, Check, Pin, PinOff, Bell,
+  Plus, X, Pin, PinOff, Bell,
   Trash2, ChevronDown,
   Archive, FileDown,
 } from 'lucide-react';
@@ -117,6 +117,7 @@ export function ChecklistPanel({
       id: `c_${Date.now()}`,
       name: newListName.trim(),
       defaultTag: tagKeys[0] || 'work',
+      bgColor: '#f8fafc',
       order: checklists.length,
       archived: false,
     };
@@ -132,6 +133,10 @@ export function ChecklistPanel({
 
   const handleArchiveList = (id: string) => {
     setChecklists(checklists.map(c => c.id === id ? { ...c, archived: true } : c));
+  };
+
+  const handleListColorChange = (id: string, bgColor: string) => {
+    setChecklists(checklists.map(c => c.id === id ? { ...c, bgColor } : c));
   };
 
   const activeChecklists = useMemo(() => checklists.filter(c => !c.archived), [checklists]);
@@ -206,7 +211,8 @@ export function ChecklistPanel({
             return (
               <div
                 key={checklist.id}
-                className="w-full md:w-[270px] shrink-0 flex flex-col bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] shadow-sm"
+                className="w-full md:w-[270px] shrink-0 flex flex-col rounded-xl border border-[var(--app-border)] shadow-sm"
+                style={{ background: checklist.bgColor || 'var(--app-surface)' }}
               >
                 {/* Column header */}
                 <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--app-border)]">
@@ -221,6 +227,16 @@ export function ChecklistPanel({
                     </span>
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
+                    <label className="p-1 rounded text-[var(--app-text-muted)] hover:text-[var(--app-text)] hover:bg-white/50 cursor-pointer" title="清单填充色">
+                      <input
+                        type="color"
+                        value={checklist.bgColor || '#f8fafc'}
+                        onChange={(e) => handleListColorChange(checklist.id, e.target.value)}
+                        className="sr-only"
+                        aria-label={`${checklist.name} 填充色`}
+                      />
+                      <span className="block w-3 h-3 rounded-full border border-[var(--app-border)]" style={{ backgroundColor: checklist.bgColor || 'var(--app-surface)' }} />
+                    </label>
                     <button onClick={() => toggleExpand(checklist.id)} className="p-1 rounded text-[var(--app-text-muted)] hover:text-[var(--app-text)] hover:bg-[var(--app-surface-hover)]">
                       <ChevronDown size={13} className={cn('transition-transform', !expanded && '-rotate-90')} />
                     </button>
@@ -253,12 +269,10 @@ export function ChecklistPanel({
                         <button
                           onClick={() => toggleTask(task.id)}
                           className={cn(
-                            'mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0',
-                            task.completed ? 'bg-[var(--app-success)] border-[var(--app-success)]' : 'border-[var(--app-border)] hover:border-[var(--app-accent)]'
+                            'mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0 bg-white',
+                            task.completed ? 'border-[var(--app-border)]' : 'border-[var(--app-border)] hover:border-[var(--app-accent)]'
                           )}
-                        >
-                          {task.completed && <Check size={10} className="text-white" />}
-                        </button>
+                        />
 
                         {/* Content */}
                         <div className="flex-1 min-w-0" onClick={() => onOpenEdit(task)}>

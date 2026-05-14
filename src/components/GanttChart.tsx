@@ -54,7 +54,7 @@ function groupOverlapping(tasks: GanttTask[]): GanttTask[][] {
 }
 
 export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorderProjects }: GanttChartProps) {
-  const dayTasks = tasks.filter(t => t.date === selectedDate && !t.completed && t.time);
+  const dayTasks = tasks.filter(t => t.date === selectedDate && t.time);
   const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null);
 
   const minutesToPx = (minutes: number) => {
@@ -290,12 +290,13 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
                         width: `${colWidth - 6}%`,
                         height: `${heightPx}px`,
                         backgroundColor: p.color,
+                        opacity: task.completed ? 0.48 : 1,
                         minHeight: '36px',
                       }}
                       title={`${task.title} (${task.time} - ${task.duration || 60}分钟)`}
                     >
                       <div className="px-2 py-1 flex flex-col h-full justify-center min-h-0 overflow-hidden">
-                        <span className="text-[11px] font-semibold text-white truncate leading-tight">
+                        <span className={cn('text-[11px] font-semibold text-white truncate leading-tight', task.completed && 'line-through')}>
                           {task.title}
                         </span>
                         <span className="text-[9px] text-white/80 mt-0.5">

@@ -83,7 +83,7 @@ function getTimeSlotCN(slot: TimeSlot): string {
 }
 
 // ─── Hook ────────────────────────────────────────
-export function useLearningSystem(tasks: Task[]) {
+export function useLearningSystem(tasks: Task[], tags: Record<string, { label: string; color: string }> = {}) {
   // Build task logs from completed tasks
   const taskLogs = useMemo((): TaskLog[] => {
     return tasks
@@ -132,11 +132,6 @@ export function useLearningSystem(tasks: Task[]) {
   // ─── Tag Stats ───
   const tagStats = useMemo((): TagStats => {
     const buckets: Record<string, { total: number; completed: number }> = {};
-    const tagLabels = ['工作', '个人', '重要', '会议', '购物', '学习'];
-
-    Object.keys(tasks).forEach(() => {
-      // Use tags from existing system
-    });
 
     tasks.forEach(t => {
       if (!buckets[t.tag]) buckets[t.tag] = { total: 0, completed: 0 };
@@ -149,11 +144,11 @@ export function useLearningSystem(tasks: Task[]) {
       result[tag] = {
         ...data,
         rate: data.total > 0 ? Math.round(data.completed / data.total * 100) : 0,
-        label: tagLabels[Object.keys(buckets).indexOf(tag)] || tag,
+        label: tags[tag]?.label || tag,
       };
     });
     return result;
-  }, [tasks]);
+  }, [tasks, tags]);
 
   // ─── Weekly Trend (this week's daily completion) ───
   const weeklyTrend = useMemo((): { day: string; value: number }[] => {

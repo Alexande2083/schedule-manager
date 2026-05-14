@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from 'react';
 import {
-  Check, Trash2, Clock, Tag, GripVertical, FolderOpen, Flag,
+  Trash2, Clock, Tag, GripVertical, FolderOpen, Flag,
   AlertTriangle, Calendar, ChevronDown, ChevronRight, Square, CheckSquare,
   Monitor, Smartphone, Building2, Car, Users, Home, Link2
 } from 'lucide-react';
@@ -143,14 +143,12 @@ export function TaskItem({
         <button
           onClick={() => onToggle(task.id)}
           className={cn(
-            'mt-0.5 w-[18px] h-[18px] rounded-md border-2 flex items-center justify-center transition-all duration-200 shrink-0',
+            'mt-0.5 w-[18px] h-[18px] rounded-md border-2 flex items-center justify-center transition-all duration-200 shrink-0 bg-white',
             task.completed
-              ? 'bg-[#8cc68a] border-[#8cc68a]'
+              ? 'border-[var(--app-border)]'
               : 'border-[var(--app-border)] hover:border-[var(--app-accent)]'
           )}
-        >
-          {task.completed && <Check size={11} className="text-white" />}
-        </button>
+        />
 
         <div className="flex-1 min-w-0">
           {isEditing ? (

@@ -196,13 +196,13 @@ export function WeatherTimeWidget() {
 
       <div className="p-3 relative z-10">
         {/* 时间 + 日期 */}
-        <div className="flex items-baseline justify-between mb-2">
-          <div className="text-[20px] font-semibold tabular-nums tracking-tight text-[var(--app-text)] leading-none">
+        <div className="flex items-end justify-between mb-2 pt-1">
+          <div className="text-[20px] font-semibold tabular-nums tracking-tight text-[var(--app-text)] leading-none translate-y-1">
             {timeStr}
           </div>
           <div className="text-right">
-            <div className="text-[12px] font-medium text-[var(--app-text-secondary)]">{dateStr}</div>
-            <div className="text-[10px] text-[var(--app-text-muted)] mt-0.5">{weekStr} · {lunar.toString()}</div>
+            <div className="text-[15px] font-semibold text-red-600 tabular-nums">{dateStr}</div>
+            <div className="text-[11px] text-[var(--app-text-muted)] mt-0.5">{weekStr} · {lunar.toString()}</div>
           </div>
         </div>
 

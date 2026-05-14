@@ -1,11 +1,9 @@
 import { motion } from 'framer-motion';
 import {
-  Brain, Clock, TrendingUp, Target, Zap,
-  Sun, Moon, Cloud, Flame, Award, Lightbulb,
-  BarChart3, Activity,
+  Brain, Clock, Target, Zap,
+  Flame, Award, Lightbulb,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { Insights, TimeSlot } from '@/hooks/useLearningSystem';
+import type { Insights } from '@/hooks/useLearningSystem';
 
 interface UserInsightsProps {
   insights: Insights;
@@ -21,13 +19,7 @@ const item = {
 };
 
 export function UserInsights({ insights }: UserInsightsProps) {
-  const { profile, timeSlotStats, tagStats, weeklyTrend, optimizationTips } = insights;
-
-  const slotIcon = (slot: TimeSlot) => {
-    if (slot === 'morning') return <Sun size={16} />;
-    if (slot === 'afternoon') return <Cloud size={16} />;
-    return <Moon size={16} />;
-  };
+  const { profile, optimizationTips } = insights;
 
   return (
     <motion.div
@@ -51,7 +43,7 @@ export function UserInsights({ insights }: UserInsightsProps) {
 
       {/* Profile Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 px-4 md:px-6 pb-3 md:pb-4">
-        <motion.div variants={item} className="saas-stats-card bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 shadow-sm">
+        <motion.div variants={item} className="saas-stats-card rounded-2xl p-5 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-[var(--app-text-muted)]">最佳时段</span>
             <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
@@ -64,7 +56,7 @@ export function UserInsights({ insights }: UserInsightsProps) {
           <p className="text-xs text-[var(--app-text-muted)] mt-1">{profile.highEnergyWindow}</p>
         </motion.div>
 
-        <motion.div variants={item} className="saas-stats-card bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 shadow-sm">
+        <motion.div variants={item} className="saas-stats-card rounded-2xl p-5 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-[var(--app-text-muted)]">完成率</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
@@ -75,7 +67,7 @@ export function UserInsights({ insights }: UserInsightsProps) {
           <p className="text-xs text-[var(--app-text-muted)] mt-1">总完成率</p>
         </motion.div>
 
-        <motion.div variants={item} className="saas-stats-card bg-gradient-to-br from-rose-50 to-orange-50 border border-rose-100 shadow-sm">
+        <motion.div variants={item} className="saas-stats-card rounded-2xl p-5 bg-gradient-to-br from-rose-50 to-orange-50 border border-rose-100 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-[var(--app-text-muted)]">连续天数</span>
             <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center">
@@ -86,7 +78,7 @@ export function UserInsights({ insights }: UserInsightsProps) {
           <p className="text-xs text-[var(--app-text-muted)] mt-1">连续完成任务</p>
         </motion.div>
 
-        <motion.div variants={item} className="saas-stats-card bg-gradient-to-br from-sky-50 to-indigo-50 border border-sky-100 shadow-sm">
+        <motion.div variants={item} className="saas-stats-card rounded-2xl p-5 bg-gradient-to-br from-sky-50 to-indigo-50 border border-sky-100 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-[var(--app-text-muted)]">周容量</span>
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">
@@ -98,116 +90,8 @@ export function UserInsights({ insights }: UserInsightsProps) {
         </motion.div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 px-4 md:px-6 pb-4 md:pb-6">
-        {/* Time Slot Analysis */}
-        <motion.div variants={item} className="saas-card p-5 lg:col-span-1">
-          <h3 className="text-xs font-semibold text-[var(--app-text)] mb-4 flex items-center gap-2">
-            <Activity size={14} className="text-purple-500" />
-            时段效率分析
-          </h3>
-          <div className="space-y-3">
-            {(Object.entries(timeSlotStats) as [TimeSlot, { total: number; completed: number; rate: number }][]).map(([slot, data]) => (
-              <div key={slot}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      'w-7 h-7 rounded-lg flex items-center justify-center',
-                      slot === 'morning' ? 'bg-amber-50 text-amber-600' : slot === 'afternoon' ? 'bg-sky-50 text-sky-600' : 'bg-indigo-50 text-indigo-600'
-                    )}>
-                      {slotIcon(slot)}
-                    </span>
-                    <span className="text-xs font-medium text-[var(--app-text)]">
-                      {slot === 'morning' ? '上午' : slot === 'afternoon' ? '下午' : '晚上'}
-                    </span>
-                  </div>
-                  <span className={cn(
-                    'text-xs font-semibold tabular-nums',
-                    data.rate >= 70 ? 'text-emerald-600' : data.rate >= 40 ? 'text-amber-600' : 'text-red-500'
-                  )}>
-                    {data.rate}%
-                  </span>
-                </div>
-                <div className="w-full h-1.5 rounded-full bg-[var(--app-surface-hover)] overflow-hidden">
-                  <div
-                    className={cn('h-full rounded-full transition-all duration-500', data.rate >= 70 ? 'bg-emerald-400' : data.rate >= 40 ? 'bg-amber-400' : 'bg-red-400')}
-                    style={{ width: `${data.rate}%` }}
-                  />
-                </div>
-                <p className="text-[10px] text-[var(--app-text-muted)] mt-1">{data.completed}/{data.total} 个完成</p>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Tag Performance */}
-        <motion.div variants={item} className="saas-card p-5 lg:col-span-1">
-          <h3 className="text-xs font-semibold text-[var(--app-text)] mb-4 flex items-center gap-2">
-            <BarChart3 size={14} className="text-blue-500" />
-            标签完成率
-          </h3>
-          <div className="space-y-3">
-            {Object.entries(tagStats)
-              .sort(([, a], [, b]) => b.rate - a.rate)
-              .slice(0, 6)
-              .map(([tag, data]) => (
-                <div key={tag}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-[var(--app-text)]">{data.label || tag}</span>
-                    <span className="text-[11px] tabular-nums font-medium text-[var(--app-text-secondary)]">{data.rate}%</span>
-                  </div>
-                  <div className="w-full h-1 rounded-full bg-[var(--app-surface-hover)] overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-blue-400 to-purple-400 transition-all duration-500"
-                      style={{ width: `${data.rate}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-[var(--app-text-muted)]">{data.completed}/{data.total}</p>
-                </div>
-              ))}
-          </div>
-        </motion.div>
-
-        {/* Weekly Trend + Tips */}
-        <motion.div variants={item} className="saas-card p-5 lg:col-span-1">
-          <h3 className="text-xs font-semibold text-[var(--app-text)] mb-4 flex items-center gap-2">
-            <TrendingUp size={14} className="text-emerald-500" />
-            周完成趋势
-          </h3>
-          {/* Bar chart */}
-          <div className="relative mb-4">
-            {/* Y-axis labels */}
-            <div className="absolute left-0 top-0 bottom-5 w-6 flex flex-col justify-between text-[8px] text-[var(--app-text-muted)] leading-none">
-              {weeklyTrend.length > 0 && (() => {
-                const maxVal = Math.max(...weeklyTrend.map(d => d.value), 1);
-                const steps = Math.min(maxVal, 4);
-                return Array.from({ length: steps + 1 }, (_, i) => (
-                  <span key={i}>{Math.round((maxVal / steps) * (steps - i))}</span>
-                ));
-              })()}
-            </div>
-            {/* Bars */}
-            <div className="flex items-end gap-1 pl-7 h-32">
-              {weeklyTrend.map((item, idx) => {
-                const maxVal = Math.max(...weeklyTrend.map(d => d.value), 1);
-                const barHeight = item.value > 0 ? Math.round((item.value / maxVal) * 100) : 0;
-                return (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                    <span className="text-[9px] font-medium tabular-nums text-[var(--app-text-secondary)]">{item.value}</span>
-                    <div
-                      className={cn(
-                        'w-full rounded-sm transition-all duration-300',
-                        idx >= 5 ? 'bg-gradient-to-t from-[var(--app-accent)] to-[var(--app-accent)]/50' : 'bg-[var(--color-bg-active)]'
-                      )}
-                      style={{ height: `${barHeight}%`, minHeight: item.value > 0 ? '4px' : '2px' }}
-                    />
-                    <span className="text-[8px] text-[var(--app-text-muted)] whitespace-nowrap">{item.day}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Optimization Tips */}
+      <div className="px-4 md:px-6 pb-4 md:pb-6">
+        <motion.div variants={item} className="saas-card p-5 rounded-2xl">
           <h3 className="text-xs font-semibold text-[var(--app-text)] mb-3 flex items-center gap-2">
             <Lightbulb size={14} className="text-amber-500" />
             优化建议

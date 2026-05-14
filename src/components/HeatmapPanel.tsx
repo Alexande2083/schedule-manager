@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { format, subDays } from 'date-fns';
+import { format, startOfYear, differenceInCalendarDays, addDays } from 'date-fns';
 import { Trophy, Flame, CheckCircle2, TrendingUp } from 'lucide-react';
 import type { Task } from '@/types';
 
@@ -25,7 +25,6 @@ const LEVEL_COLORS_DARK = [
 ];
 
 const SHORT_DAYS = ['日', '一', '二', '三', '四', '五', '六'];
-const WEEKS = 13;
 const CELL = 14;
 const GAP = 3;
 
@@ -51,12 +50,13 @@ export function HeatmapPanel({ tasks, compact }: HeatmapPanelProps) {
 
   const { weeks, monthHeaders, stats, achievement } = useMemo(() => {
     const completedTasks = tasks.filter(t => t.completed);
-    const totalDays = WEEKS * 7;
     const today = new Date();
+    const start = startOfYear(today);
+    const totalDays = differenceInCalendarDays(today, start) + 1;
 
     const days: { date: Date; count: number }[] = [];
-    for (let i = totalDays - 1; i >= 0; i--) {
-      const date = subDays(today, i);
+    for (let i = 0; i < totalDays; i++) {
+      const date = addDays(start, i);
       const s = new Date(date.getFullYear(), date.getMonth(), date.getDate());
       const e = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
       const count = completedTasks.filter(t => {
@@ -114,7 +114,7 @@ export function HeatmapPanel({ tasks, compact }: HeatmapPanelProps) {
     const gapSize = COMPACT_GAP;
     const colW = cellSize + gapSize;
     const labelW = 16;
-    const svgW = labelW + WEEKS * colW;
+    const svgW = labelW + weeks.length * colW;
     const svgH = 12 + 7 * (cellSize + gapSize) + 14; // 12 for month header, 14 for legend
 
     return (
@@ -138,7 +138,7 @@ export function HeatmapPanel({ tasks, compact }: HeatmapPanelProps) {
         {/* SVG Heatmap — fills remaining space */}
         <svg
           viewBox={`0 0 ${svgW} ${svgH}`}
-          preserveAspectRatio="xMidYMin meet"
+          preserveAspectRatio="xMinYMin meet"
           className="w-full max-h-[150px]"
         >
           {/* Month headers */}
@@ -257,7 +257,7 @@ export function HeatmapPanel({ tasks, compact }: HeatmapPanelProps) {
 
       {/* 热力图 */}
       <div className="overflow-x-auto pb-2">
-        <div style={{ minWidth: 24 + WEEKS * colTotalWidth }}>
+        <div style={{ width: '100%', minWidth: 24 + weeks.length * colTotalWidth }}>
           <div className="flex mb-1" style={{ paddingLeft: 24 }}>
             {monthHeaders.map((m, i) => (
               <div key={i} className="text-[10px] text-[var(--app-text-muted)] shrink-0"

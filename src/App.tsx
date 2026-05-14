@@ -95,7 +95,7 @@ function App() {
   const pomodoro = usePomodoro();
   useFontSize();
   const habits = useHabits();
-  const learning = useLearningSystem(tasks);
+  const learning = useLearningSystem(tasks, tags);
   useNotifications({ tasks, pomodoro });
   const taskTemplates = useTaskTemplates();
 
@@ -259,7 +259,6 @@ function App() {
               completedToday={pomodoro.completedToday}
               templates={taskTemplates.templates}
               onGenerateSchedule={learning.generateSmartSchedule}
-              onGeneratePlan={learning.generateWeeklyPlan}
               pendingTodayCount={learning.pendingTasks.filter(t => t.date === selectedDate).length}
             />
           )}

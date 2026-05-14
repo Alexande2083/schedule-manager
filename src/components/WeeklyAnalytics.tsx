@@ -46,8 +46,8 @@ const COLOR_PALETTE = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#
 
 // ─── Helpers ─────────────────────────────────────
 
-function getTagLabel(tag: string): string {
-  return TAG_LABEL_MAP[tag] || tag;
+function getTagLabel(tag: string, tags?: Record<string, { label: string; color: string }>): string {
+  return tags?.[tag]?.label || TAG_LABEL_MAP[tag] || tag;
 }
 
 // ─── Component ────────────────────────────────────
@@ -100,7 +100,7 @@ export function WeeklyAnalytics({
     const pieData = entries
       .filter(([, v]) => v.total > 0)
       .map(([tag, v], i) => ({
-        name: getTagLabel(tag),
+        name: getTagLabel(tag, tags),
         value: v.total,
         rate: v.rate,
         color: tags[tag]?.color || COLOR_PALETTE[i % COLOR_PALETTE.length],
@@ -217,10 +217,10 @@ export function WeeklyAnalytics({
         count: dayTasks.length,
         completed: dayTasks.filter(t => t.completed).length,
         dominantTag: dominant?.[0] || 'work',
-        dominantLabel: dominant ? getTagLabel(dominant[0]) : '无任务',
+        dominantLabel: dominant ? getTagLabel(dominant[0], tags) : '无任务',
       };
     });
-  }, [weekTasks]);
+  }, [weekTasks, tags]);
 
   const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
   const textMuted = 'var(--color-text-muted)';
@@ -263,7 +263,7 @@ export function WeeklyAnalytics({
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-[9px] px-1.5 py-0.5 rounded-full"
                     style={{ background: goal.color + '20', color: goal.color }}>
-                    {getTagLabel(goal.tag)}
+                    {getTagLabel(goal.tag, tags)}
                   </span>
                 </div>
               </div>
@@ -309,62 +309,100 @@ export function WeeklyAnalytics({
 
       {/* ══════ Module 2: Weekly Heatmap ══════ */}
       <Section title="活跃热力图" icon={Flame}>
-        <div className="overflow-x-auto -mx-2" style={{ touchAction: 'pan-x' }}>
-          <div className="min-w-[420px] lg:w-1/2">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.85fr)] gap-4">
+          <div className="overflow-x-auto" style={{ touchAction: 'pan-x' }}>
             <HeatmapPanel tasks={tasks} />
           </div>
+          <WeeklyReviewContent
+            completionRate={completionRate}
+            reviewData={reviewData}
+            learning={learning}
+            tagStats={learning.tagStats}
+            timeSlotStats={learning.timeSlotStats}
+            textColor={textColor}
+            textSecondary={textSecondary}
+            textMuted={textMuted}
+          />
         </div>
+      </Section>
+
+      {/* ══════ Module 5: Free Time Suggestions ══════ */}
+      <Section title="空闲时间建议" icon={Zap} accent>
+        {freeTimeSlots.length === 0 ? (
+          <p className="text-xs" style={{ color: textMuted }}>暂无长空闲时段 — 日程安排很充实！</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {freeTimeSlots.map((slot, i) => (
+              <div key={i}
+                className="rounded-xl border p-4 flex items-start gap-3 transition-all hover:shadow-sm"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(139,92,246,0.06), transparent)',
+                  borderColor: 'rgba(139,92,246,0.2)',
+                }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: 'rgba(139,92,246,0.12)', color: '#8b5cf6' }}>
+                  <Zap size={14} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium" style={{ color: textColor }}>{slot.day} · {slot.label}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-accent-purple)' }}>{slot.suggestion}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Section>
 
       {/* ══════ Module 3 + 4: Time Allocation + Trends ─ two column on desktop ══════ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Module 3: Time Allocation */}
         <Section title="时间分配" icon={Clock} noPad>
-          <div className="grid grid-cols-2 gap-2 p-4 pb-0">
-            {timeAllocation.pieData.map((item) => (
-              <div key={item.name} className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
-                style={{ background: 'var(--color-bg)' }}>
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
-                <span className="text-[11px] truncate flex-1" style={{ color: textColor }}>{item.name}</span>
-                <span className="text-[11px] font-mono font-medium" style={{ color: textSecondary }}>{item.value}</span>
-              </div>
-            ))}
-          </div>
-          {/* Donut chart */}
-          <div className="h-[190px]">
-            {timeAllocation.pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={timeAllocation.pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={75}
-                    dataKey="value"
-                    strokeWidth={2}
-                    stroke={isDark ? '#1a1a2e' : '#fff'}
-                  >
-                    {timeAllocation.pieData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--color-bg-raised)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      color: textColor,
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-xs" style={{ color: textMuted }}>暂无数据</p>
-              </div>
-            )}
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_240px] gap-3 p-4 md:p-5 pt-0 md:pt-0">
+            <div className="space-y-2 self-center">
+              {timeAllocation.pieData.map((item) => (
+                <div key={item.name} className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                  style={{ background: 'var(--color-bg)' }}>
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: item.color }} />
+                  <span className="text-[11px] truncate flex-1" style={{ color: textColor }}>{item.name}</span>
+                  <span className="text-[11px] font-mono font-medium" style={{ color: textSecondary }}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+            <div className="h-[240px]">
+              {timeAllocation.pieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={timeAllocation.pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={62}
+                      outerRadius={92}
+                      dataKey="value"
+                      strokeWidth={2}
+                      stroke={isDark ? '#1a1a2e' : '#fff'}
+                    >
+                      {timeAllocation.pieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: 'var(--color-bg-raised)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: textColor,
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-xs" style={{ color: textMuted }}>暂无数据</p>
+                </div>
+              )}
+            </div>
           </div>
         </Section>
 
@@ -408,63 +446,8 @@ export function WeeklyAnalytics({
         </Section>
       </div>
 
-      {/* ══════ Module 5: Free Time Suggestions ══════ */}
-      <Section title="空闲时间建议" icon={Zap} accent>
-        {freeTimeSlots.length === 0 ? (
-          <p className="text-xs" style={{ color: textMuted }}>暂无长空闲时段 — 日程安排很充实！</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {freeTimeSlots.map((slot, i) => (
-              <div key={i}
-                className="rounded-xl border p-4 flex items-start gap-3 transition-all hover:shadow-sm"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(139,92,246,0.06), transparent)',
-                  borderColor: 'rgba(139,92,246,0.2)',
-                }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: 'rgba(139,92,246,0.12)', color: '#8b5cf6' }}>
-                  <Zap size={14} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium" style={{ color: textColor }}>{slot.day} · {slot.label}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-accent-purple)' }}>{slot.suggestion}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Section>
-
-      {/* ══════ Module 6 + 7: Review + Timeline ─ two column ══════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Module 6: Weekly Review */}
-        <Section title="周报总结" icon={CheckCircle2}>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              <ReviewCard icon={CheckCircle2} label="完成率" value={`${completionRate}%`} color={completionRate >= 70 ? '#22c55e' : '#f59e0b'} />
-              <ReviewCard icon={Target} label="最有效日" value={reviewData.bestDay} color="#6366f1" />
-              <ReviewCard icon={Clock} label="平均专注" value={`${reviewData.avgFocus}min`} color="#06b6d4" />
-              <ReviewCard icon={Flame} label="番茄钟" value={`${reviewData.totalPomodoros}个`} color={reviewData.totalPomodoros > 0 ? '#f59e0b' : textMuted} />
-            </div>
-            {/* Behavioral insight */}
-            <div className="rounded-xl p-4 flex items-start gap-3"
-              style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.06), transparent)', border: '1px solid rgba(99,102,241,0.12)' }}>
-              <Brain size={16} className="shrink-0 mt-0.5" style={{ color: 'var(--color-brand)' }} />
-              <div>
-                <p className="text-xs font-medium mb-1" style={{ color: textColor }}>AI 行为洞察</p>
-                <p className="text-[11px] leading-relaxed" style={{ color: textSecondary }}>
-                  {reviewData.eveningRate < 50
-                    ? `晚上完成率仅 ${reviewData.eveningRate}%，建议把重要任务往前挪。`
-                    : `晚上也能高效完成任务（${reviewData.eveningRate}% 完成率），节奏不错。`}
-                  {learning.profile.preferredTime === 'morning' ? ' 你是晨型人，上午是你的黄金时段。' :
-                    learning.profile.preferredTime === 'afternoon' ? ' 你是下午型选手，下午产出最高。' :
-                    ' 你习惯在晚上工作，注意别熬夜。'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </Section>
-
+      {/* ══════ Module 7: Week Timeline ══════ */}
+      <div>
         {/* Module 7: Week Timeline */}
         <Section title="本周节奏" icon={Calendar}>
           <div className="space-y-2">
@@ -510,6 +493,87 @@ export function WeeklyAnalytics({
 }
 
 // ─── Sub-components ──────────────────────────────
+
+function WeeklyReviewContent({
+  completionRate, reviewData, learning, tagStats, timeSlotStats, textColor, textSecondary, textMuted,
+}: {
+  completionRate: number;
+  reviewData: { bestDay: string; avgFocus: number; eveningRate: number; totalPomodoros: number };
+  learning: WeeklyAnalyticsProps['learning'];
+  tagStats: WeeklyAnalyticsProps['learning']['tagStats'];
+  timeSlotStats: WeeklyAnalyticsProps['learning']['timeSlotStats'];
+  textColor: string;
+  textSecondary: string;
+  textMuted: string;
+}) {
+  const slotLabels: Record<string, string> = { morning: '上午', afternoon: '下午', evening: '晚上' };
+
+  return (
+    <div className="rounded-xl border p-4 space-y-3" style={{ background: 'var(--color-bg)', borderColor: 'var(--color-border)' }}>
+      <div className="flex items-center gap-2">
+        <CheckCircle2 size={13} style={{ color: 'var(--color-brand)' }} />
+        <h3 className="text-[11px] uppercase tracking-wider font-semibold" style={{ color: textMuted }}>周报总结</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <ReviewCard icon={CheckCircle2} label="完成率" value={`${completionRate}%`} color={completionRate >= 70 ? '#22c55e' : '#f59e0b'} />
+        <ReviewCard icon={Target} label="最有效日" value={reviewData.bestDay} color="#6366f1" />
+        <ReviewCard icon={Clock} label="平均专注" value={`${reviewData.avgFocus}min`} color="#06b6d4" />
+        <ReviewCard icon={Flame} label="番茄钟" value={`${reviewData.totalPomodoros}个`} color={reviewData.totalPomodoros > 0 ? '#f59e0b' : textMuted} />
+      </div>
+      <div className="rounded-xl p-4 flex items-start gap-3"
+        style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.06), transparent)', border: '1px solid rgba(99,102,241,0.12)' }}>
+        <Brain size={16} className="shrink-0 mt-0.5" style={{ color: 'var(--color-brand)' }} />
+        <div>
+          <p className="text-xs font-medium mb-1" style={{ color: textColor }}>AI 行为洞察</p>
+          <p className="text-[11px] leading-relaxed" style={{ color: textSecondary }}>
+            {reviewData.eveningRate < 50
+              ? `晚上完成率仅 ${reviewData.eveningRate}%，建议把重要任务往前挪。`
+              : `晚上也能高效完成任务（${reviewData.eveningRate}% 完成率），节奏不错。`}
+            {learning.profile.preferredTime === 'morning' ? ' 你是晨型人，上午是你的黄金时段。' :
+              learning.profile.preferredTime === 'afternoon' ? ' 你是下午型选手，下午产出最高。' :
+              ' 你习惯在晚上工作，注意别熬夜。'}
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <MiniAnalysis title="时段效率分析">
+          {(Object.entries(timeSlotStats) as [keyof typeof timeSlotStats, { total: number; completed: number; rate: number }][]).map(([slot, data]) => (
+            <MiniRate key={slot} label={slotLabels[slot]} value={`${data.rate}%`} sub={`${data.completed}/${data.total}`} rate={data.rate} />
+          ))}
+        </MiniAnalysis>
+        <MiniAnalysis title="标签完成率">
+          {Object.entries(tagStats).sort(([, a], [, b]) => b.rate - a.rate).slice(0, 4).map(([tag, data]) => (
+            <MiniRate key={tag} label={data.label || tag} value={`${data.rate}%`} sub={`${data.completed}/${data.total}`} rate={data.rate} />
+          ))}
+        </MiniAnalysis>
+      </div>
+    </div>
+  );
+}
+
+function MiniAnalysis({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border p-3" style={{ background: 'var(--color-bg-raised)', borderColor: 'var(--color-border)' }}>
+      <p className="mb-2 text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{title}</p>
+      <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
+function MiniRate({ label, value, sub, rate }: { label: string; value: string; sub: string; rate: number }) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-[11px] truncate" style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
+        <span className="text-[10px] tabular-nums" style={{ color: 'var(--color-text-muted)' }}>{value}</span>
+      </div>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-hover)' }}>
+        <div className="h-full rounded-full bg-[var(--color-brand)]" style={{ width: `${rate}%` }} />
+      </div>
+      <p className="mt-0.5 text-[9px]" style={{ color: 'var(--color-text-muted)' }}>{sub}</p>
+    </div>
+  );
+}
 
 /** Section wrapper */
 function Section({
