@@ -194,18 +194,16 @@ export const Dashboard = memo(function Dashboard({
     <div className="px-4 py-4 md:p-6 max-w-[1600px] mx-auto space-y-5 md:space-y-6 animate-fade-in">
       {/* ── Page Title ── */}
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-raised)] px-4 py-4 shadow-sm md:px-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+        <div className="grid grid-cols-[36px_minmax(0,1fr)_36px] items-center gap-2">
+          <button onClick={handlePrevDay} className="btn-ghost h-9 w-9 justify-self-start" aria-label="前一天"><ChevronLeft size={16} /></button>
+          <div className="min-w-0 text-center sm:text-left">
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-brand)]">今日中心</p>
             <h1 className="mt-1 text-2xl font-semibold tracking-normal text-[var(--color-text)] md:text-3xl">{selectedDateLabel}</h1>
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               把今天的事放在一个清楚的工作台里
             </p>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <button onClick={handlePrevDay} className="btn-ghost" aria-label="前一天"><ChevronLeft size={16} /></button>
-            <button onClick={handleNextDay} className="btn-ghost" aria-label="后一天"><ChevronRight size={16} /></button>
-          </div>
+          <button onClick={handleNextDay} className="btn-ghost h-9 w-9 justify-self-end" aria-label="后一天"><ChevronRight size={16} /></button>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">
           {summaryCards.map((card) => {

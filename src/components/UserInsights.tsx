@@ -43,7 +43,7 @@ export function UserInsights({ insights }: UserInsightsProps) {
             <Brain size={20} className="text-white" />
           </div>
           <div>
-            <h1 className="text-base font-semibold text-[var(--app-text)]">学习系统</h1>
+            <h1 className="text-base font-semibold text-[var(--app-text)]">本周洞察</h1>
             <p className="text-xs text-[var(--app-text-muted)]">基于你的行为数据，生成个性化洞察和调度建议</p>
           </div>
         </div>

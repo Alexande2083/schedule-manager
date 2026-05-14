@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Sun, Moon, Check, Palette, Tag, Plus, Trash2, Type } from 'lucide-react';
+import { X, Sun, Moon, Check, Palette, Tag, Plus, Trash2, Type, Monitor } from 'lucide-react';
 import type { ThemeColor } from '@/types';
 import type { FontSize } from '@/hooks/useFontSize';
 import { useAppStore } from '@/store';
@@ -147,7 +147,10 @@ export function ThemeSettings({
 
               {/* Dark mode toggle */}
               <div>
-                <h4 className="text-sm font-medium text-[var(--app-text)] mb-3">显示模式</h4>
+                <h4 className="text-sm font-medium text-[var(--app-text)] mb-3 flex items-center gap-2">
+                  <Monitor size={14} />
+                  显示模式
+                </h4>
                 <div className="flex gap-2">
                   <button
                     onClick={() => { if (isDark) setTheme(prev => ({ ...prev, isDark: false })); }}
@@ -178,7 +181,10 @@ export function ThemeSettings({
 
               {/* Color scheme */}
               <div>
-                <h4 className="text-sm font-medium text-[var(--app-text)] mb-3">配色方案</h4>
+                <h4 className="text-sm font-medium text-[var(--app-text)] mb-3 flex items-center gap-2">
+                  <Palette size={14} />
+                  配色方案
+                </h4>
                 <div className="grid grid-cols-2 gap-2">
                   {themeOptions.map((option) => (
                     <button
@@ -252,23 +258,23 @@ export function ThemeSettings({
               {/* Add new tag */}
               <div className="p-3 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-hover)]">
                 <h4 className="text-xs font-medium text-[var(--app-text-muted)] mb-2">新建标签</h4>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_36px] gap-2">
                   <input
                     value={newTagKey}
                     onChange={(e) => setNewTagKey(e.target.value)}
                     placeholder="key"
-                    className="flex-1 text-xs bg-[var(--app-surface)] rounded-lg px-2 py-1.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)] placeholder:text-[var(--app-text-placeholder)]"
+                    className="min-w-0 text-xs bg-[var(--app-surface)] rounded-lg px-2 py-1.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)] placeholder:text-[var(--app-text-placeholder)]"
                   />
                   <input
                     value={newTagLabel}
                     onChange={(e) => setNewTagLabel(e.target.value)}
                     placeholder="显示名称"
-                    className="flex-1 text-xs bg-[var(--app-surface)] rounded-lg px-2 py-1.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)] placeholder:text-[var(--app-text-placeholder)]"
+                    className="min-w-0 text-xs bg-[var(--app-surface)] rounded-lg px-2 py-1.5 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)] placeholder:text-[var(--app-text-placeholder)]"
                   />
                   <button
                     onClick={handleAddTag}
                     disabled={!newTagKey.trim() || !newTagLabel.trim()}
-                    className="shrink-0 px-3 py-1.5 rounded-lg bg-[var(--app-accent)] text-white text-xs font-medium hover:bg-[var(--app-accent-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-9 h-8 inline-flex items-center justify-center rounded-lg bg-[var(--app-accent)] text-white text-xs font-medium hover:bg-[var(--app-accent-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus size={14} />
                   </button>

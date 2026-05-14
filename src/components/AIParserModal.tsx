@@ -3,6 +3,7 @@ import { X, Sparkles, Loader2, Plus, Check, AlertTriangle, Trash2, Edit3 } from 
 import { useAppStore } from '@/store';
 import { getToday } from '@/utils/date';
 import { cn } from '@/lib/utils';
+import type { Context, Project, Task } from '@/types';
 
 // 后端代理地址 — 开发时由 Vite 代理，生产时同域
 const API_BASE = '';
@@ -23,6 +24,91 @@ interface ParsedTask {
   deadline?: string;
   projectId?: string;
   selected: boolean;
+}
+
+type ChatMessage = { role: 'user' | 'ai'; content: string };
+
+function getRelativeDate(offset: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + offset);
+  return date.toISOString().slice(0, 10);
+}
+
+function formatCompletedAt(completedAt?: number) {
+  if (!completedAt) return '';
+  return new Date(completedAt).toISOString().slice(0, 10);
+}
+
+function buildTaskContext(
+  tasks: Task[],
+  projects: Project[],
+  tags: Record<string, { label: string; color: string }>,
+  contexts: Context[],
+) {
+  const today = getToday();
+  const yesterday = getRelativeDate(-1);
+  const tomorrow = getRelativeDate(1);
+  const windowStart = getRelativeDate(-14);
+  const windowEnd = getRelativeDate(14);
+  const projectMap = new Map(projects.map(project => [project.id, project.name]));
+  const contextMap = new Map(contexts.map(context => [context.id, context.label]));
+
+  const relevantTasks = tasks
+    .filter(task => {
+      const completedDate = formatCompletedAt(task.completedAt);
+      return (
+        (task.date >= windowStart && task.date <= windowEnd) ||
+        (completedDate >= windowStart && completedDate <= today) ||
+        task.pinned ||
+        (task.deadline && task.deadline >= windowStart && task.deadline <= windowEnd)
+      );
+    })
+    .sort((a, b) => {
+      const dateCompare = b.date.localeCompare(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      return (a.time || '99:99').localeCompare(b.time || '99:99');
+    })
+    .slice(0, 120);
+
+  const lines = relevantTasks.map(task => {
+    const tagLabel = tags[task.tag]?.label || task.tag;
+    const project = task.projectId ? projectMap.get(task.projectId) : undefined;
+    const contextLabels = (task.contexts || []).map(id => contextMap.get(id) || id);
+    const completedDate = formatCompletedAt(task.completedAt);
+    const flags = [
+      task.completed ? '已完成' : '待办',
+      task.pinned ? '置顶' : '',
+      task.importance === 'important' ? '重要' : '',
+      task.urgency === 'urgent' ? '紧急' : '',
+    ].filter(Boolean).join('/');
+
+    return [
+      `- ${task.date}${task.time ? ` ${task.time}` : ''} ${task.title}`,
+      `状态:${flags}`,
+      `标签:${tagLabel}`,
+      project ? `项目:${project}` : '',
+      contextLabels.length ? `上下文:${contextLabels.join(',')}` : '',
+      task.deadline ? `截止:${task.deadline}` : '',
+      completedDate ? `完成日期:${completedDate}` : '',
+      task.duration ? `预计:${task.duration}分钟` : '',
+      task.pomodoros ? `番茄钟:${task.pomodoros}` : '',
+      task.notes ? `备注:${task.notes}` : '',
+    ].filter(Boolean).join(' | ');
+  });
+
+  return `今天是 ${today}，昨天是 ${yesterday}，明天是 ${tomorrow}。
+你可以访问下面的本地任务上下文。回答用户关于“昨天/今天/本周/已完成/待办/项目”的问题时，必须优先基于这些数据；如果没有找到对应记录，就说“当前任务记录里没有找到……”，不要说你无法访问历史记录。
+
+任务统计：
+- 全部任务：${tasks.length}
+- 已完成：${tasks.filter(task => task.completed).length}
+- 待办：${tasks.filter(task => !task.completed).length}
+- 昨天日期任务：${tasks.filter(task => task.date === yesterday).length}
+- 昨天完成任务：${tasks.filter(task => formatCompletedAt(task.completedAt) === yesterday).length}
+- 今天任务：${tasks.filter(task => task.date === today).length}
+
+近期任务明细（最多120条）：
+${lines.length ? lines.join('\n') : '暂无任务记录'}`;
 }
 
 const SYSTEM_PROMPT = `你是一个任务提取助手。请分析用户粘贴的通知/会议纪要/工作安排文本，提取所有明确的任务事项。
@@ -54,6 +140,9 @@ const SYSTEM_PROMPT = `你是一个任务提取助手。请分析用户粘贴的
 
 export function AIParserModal({ isOpen, onClose }: AIParserModalProps) {
   const tags = useAppStore(s => s.tags);
+  const tasks = useAppStore(s => s.tasks);
+  const projects = useAppStore(s => s.projects);
+  const contexts = useAppStore(s => s.contexts);
   const addParsedTasks = useAppStore(s => s.addParsedTasks);
   const [notificationText, setNotificationText] = useState('');
   const [parsedTasks, setParsedTasks] = useState<ParsedTask[]>([]);
@@ -171,24 +260,29 @@ export function AIParserModal({ isOpen, onClose }: AIParserModalProps) {
 
   const [chatMode, setChatMode] = useState(false);
   const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; content: string }[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
 
   const handleChat = async () => {
     if (!chatInput.trim() || chatLoading) return;
     const userMsg = chatInput.trim();
+    const nextMessages: ChatMessage[] = [...chatMessages, { role: 'user', content: userMsg }];
     setChatInput('');
-    setChatMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setChatMessages(nextMessages);
     setChatLoading(true);
     try {
+      const taskContext = buildTaskContext(tasks, projects, tags, contexts);
       const response = await fetch(`${API_BASE}/api/summary`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'deepseek-chat',
           messages: [
-            { role: 'system', content: '你是一个日程助手。帮助用户管理任务、创建任务、查询状态。回答简洁直接。当前没有任务上下文信息，请直接回答用户的问题或帮用户规划。' },
-            { role: 'user', content: userMsg },
+            { role: 'system', content: `你是一个日程助手。帮助用户管理任务、创建任务、查询状态和总结工作。回答简洁直接，涉及工作记录时要列出具体任务名称、日期和状态。\n\n${taskContext}` },
+            ...nextMessages.slice(-8).map(msg => ({
+              role: msg.role === 'ai' ? 'assistant' : 'user',
+              content: msg.content,
+            })),
           ],
           temperature: 0.7,
         }),

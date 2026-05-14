@@ -9,8 +9,8 @@ interface MobileHeaderProps {
 
 const VIEW_LABELS: Record<string, string> = {
   today: '今日中心', week: '本周概览', checklist: '清单',
-  mindmap: '导图', review: '回顾', perspectives: '透视',
-  habits: '习惯', timeblocking: '时间块', insights: '洞察',
+  mindmap: '导图', review: '回顾',
+  habits: '习惯', timeblocking: '时间块',
   weeklyplan: '周计划', scheduler: '排程', completed: '已完成',
 };
 

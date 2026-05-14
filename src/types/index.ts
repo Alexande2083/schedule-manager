@@ -99,7 +99,7 @@ export interface PomodoroState {
   completedToday: number;
 }
 
-export type ViewType = 'today' | 'week' | 'completed' | 'checklist' | 'mindmap' | 'review' | 'perspectives';
+export type ViewType = 'today' | 'week' | 'completed' | 'checklist' | 'mindmap' | 'review' | 'habits';
 
 // Theme color scheme
 export type ThemeColor = 'coral' | 'ocean' | 'mint' | 'lavender' | 'amber' | 'rose' | 'sky' | 'sunset';

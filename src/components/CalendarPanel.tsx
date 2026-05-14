@@ -130,7 +130,7 @@ export function CalendarPanel({ tasks, selectedDate, onSelectDate, tags = {} }: 
             >
               {/* Date number */}
               <span className={cn(
-                'text-[11px] leading-none',
+                'text-[13px] leading-none',
                 isSel ? 'text-white' : '',
                 lunar.term ? 'font-bold' : ''
               )}>
@@ -139,15 +139,15 @@ export function CalendarPanel({ tasks, selectedDate, onSelectDate, tags = {} }: 
               {/* Lunar / Term info */}
               {lunar.term ? (
                 <span className={cn(
-                  'text-[7px] leading-none mt-px truncate w-full px-0.5',
-                  isSel ? 'text-white/80' : 'text-[var(--color-danger)]'
+                  'text-[9px] leading-none mt-0.5 truncate w-full px-0.5 font-semibold',
+                  isSel ? 'text-white' : 'text-red-600'
                 )}>
                   {lunar.term}
                 </span>
               ) : (
                 <span className={cn(
-                  'text-[7px] leading-none mt-px',
-                  isSel ? 'text-white/70' : 'text-[var(--app-text-muted)]'
+                  'text-[9px] leading-none mt-0.5',
+                  isSel ? 'text-white' : 'text-black'
                 )}>
                   {lunar.dayStr}
                 </span>

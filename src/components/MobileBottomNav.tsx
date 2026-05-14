@@ -1,4 +1,4 @@
-import { Calendar, Timer, Brain, Flame, Settings } from 'lucide-react';
+import { Calendar, CalendarDays, Timer, Flame, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MobileBottomNavProps {
@@ -11,7 +11,7 @@ interface MobileBottomNavProps {
 export function MobileBottomNav({ view, onChangeView, onOpenPomodoro, onOpenSettings }: MobileBottomNavProps) {
   const items = [
     { id: 'today', label: '今日', icon: Calendar },
-    { id: 'insights', label: '洞察', icon: Brain },
+    { id: 'week', label: '本周', icon: CalendarDays },
     { id: 'habits', label: '习惯', icon: Flame },
   ];
 

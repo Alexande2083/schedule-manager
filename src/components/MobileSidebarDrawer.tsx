@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard, CalendarDays, ListChecks, Eye, View,
+  LayoutDashboard, CalendarDays, ListChecks, View,
   Flame, Moon, Sun, X,
-  Brain, Calendar, Zap, Tag, FolderKanban, MapPin,
+  Calendar, Zap, Tag, FolderKanban, MapPin,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 
@@ -11,9 +11,7 @@ const NAV_ITEMS = [
   { id: 'today', label: '仪表盘', icon: LayoutDashboard },
   { id: 'week', label: '本周', icon: CalendarDays },
   { id: 'checklist', label: '清单', icon: ListChecks },
-  { id: 'perspectives', label: '透视', icon: Eye },
   { id: 'habits', label: '习惯', icon: Flame },
-  { id: 'insights', label: '洞察', icon: Brain },
   { id: 'weeklyplan', label: '计划', icon: Calendar },
   { id: 'scheduler', label: '排程', icon: Zap },
   { id: 'review', label: '回顾', icon: View },

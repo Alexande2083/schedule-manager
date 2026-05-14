@@ -145,7 +145,7 @@ export function SettingsModal({
                 onClick={() => { onOpenTheme(); onClose(); }}
                 className="w-full text-center text-[11px] py-2 rounded-btn transition-all"
                 style={{ color: 'var(--color-brand)', background: 'var(--color-bg)' }}>
-                高级主题设置（标签颜色、毛玻璃等） →
+                高级主题设置
               </button>
             </div>
           )}

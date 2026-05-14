@@ -27,7 +27,6 @@ import { AIParserModal } from '@/components/AIParserModal';
 import { AISummaryModal } from '@/components/AISummaryModal';
 import { ReviewPanel } from '@/components/ReviewPanel';
 import { ChecklistPanel } from '@/components/ChecklistPanel';
-import { PerspectivesPanel } from '@/components/PerspectivesPanel';
 import { ThemeSettings } from '@/components/ThemeSettings';
 import { NotificationSettings } from '@/components/NotificationSettings';
 import { TaskEditModal } from '@/components/TaskEditModal';
@@ -238,23 +237,22 @@ function App() {
             <div className="p-6">
               <ReviewPanel />
             </div>
-          ) : view === 'perspectives' ? (
-            <PerspectivesPanel />
           ) : view === 'habits' ? (
             <div className="p-6">
               <HabitsPanel habits={habits.habits} logs={habits.logs}
                 onAddHabit={habits.addHabit} onDeleteHabit={habits.deleteHabit} onToggleLog={habits.toggleLog} />
             </div>
-          ) : view === 'insights' ? (
-            <UserInsights insights={{ profile: learning.profile, timeSlotStats: learning.timeSlotStats, tagStats: learning.tagStats, weeklyTrend: learning.weeklyTrend, optimizationTips: learning.optimizationTips }} />
           ) : view === 'week' ? (
-            <WeeklyAnalytics
-              tasks={contextFilteredTasks}
-              tags={tags}
-              learning={learning}
-              habits={habits}
-              onSelectDate={handleSelectDate}
-            />
+            <>
+              <WeeklyAnalytics
+                tasks={contextFilteredTasks}
+                tags={tags}
+                learning={learning}
+                habits={habits}
+                onSelectDate={handleSelectDate}
+              />
+              <UserInsights insights={{ profile: learning.profile, timeSlotStats: learning.timeSlotStats, tagStats: learning.tagStats, weeklyTrend: learning.weeklyTrend, optimizationTips: learning.optimizationTips }} />
+            </>
           ) : (
             <Dashboard
               onOpenEdit={setEditingTask}
