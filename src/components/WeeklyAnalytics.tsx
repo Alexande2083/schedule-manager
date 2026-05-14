@@ -273,7 +273,7 @@ export function WeeklyAnalytics({
             </div>
           ))}
           {/* AI goal card */}
-          <div className="rounded-xl border p-4 flex flex-col items-center justify-center gap-2 min-h-[80px]"
+          <div className="rounded-xl border p-4 flex flex-col items-center justify-center gap-2 min-h-[80px] lg:col-start-3"
             style={{ background: 'var(--color-bg-raised)', borderColor, borderStyle: 'dashed' }}>
             <div className="flex gap-2 w-full">
               <input
@@ -310,7 +310,7 @@ export function WeeklyAnalytics({
       {/* ══════ Module 2: Weekly Heatmap ══════ */}
       <Section title="活跃热力图" icon={Flame}>
         <div className="overflow-x-auto -mx-2" style={{ touchAction: 'pan-x' }}>
-          <div className="min-w-[600px]">
+          <div className="min-w-[420px] lg:w-1/2">
             <HeatmapPanel tasks={tasks} />
           </div>
         </div>
@@ -529,7 +529,7 @@ function Section({
         borderColor: accent ? 'rgba(139,92,246,0.25)' : 'var(--color-border)',
       }}
     >
-      <div className="flex items-center gap-2 mb-3">
+      <div className={cn('flex items-center gap-2 mb-3', noPad && 'px-4 pt-4 md:px-5 md:pt-5')}>
         <Icon size={13} style={{ color: accent ? '#8b5cf6' : 'var(--color-brand)' }} />
         <h2 className="text-[11px] uppercase tracking-wider font-semibold" style={{ color: 'var(--color-text-muted)' }}>
           {title}

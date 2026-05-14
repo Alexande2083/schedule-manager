@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { Search, Sparkles } from 'lucide-react';
 import type { Task } from '@/types';
 import { getToday } from '@/utils/date';
 import { useAppStore } from '@/store';
@@ -206,7 +207,7 @@ function App() {
       {/* === Main Content === */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0" style={{ background: 'var(--color-bg)' }}>
         {/* Mobile Header */}
-        <header className="md:hidden flex-shrink-0 border-b border-[var(--color-border)] px-4 py-3">
+        <header className="md:hidden flex-shrink-0">
           <MobileHeader
             view={view}
             onOpenSidebar={() => setMobileSidebarOpen(true)}
@@ -218,12 +219,14 @@ function App() {
         {/* Content */}
         <main className="flex-1 overflow-y-auto">
           {['today', 'week', 'checklist'].includes(view) && (
-            <div className="flex items-center justify-end gap-2 px-6 pt-3">
-              <button onClick={() => setAiParserOpen(true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-[var(--color-brand)] transition-all">
-                ✨ AI 解析
+            <div className="flex items-center justify-end gap-2 px-4 pt-3 md:px-6">
+              <button onClick={() => setAiParserOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-[var(--color-brand)] transition-all">
+                <Sparkles size={13} />
+                AI 解析
               </button>
-              <button onClick={() => setSearchOpen(true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-[var(--color-brand)] transition-all">
-                🔍 搜索
+              <button onClick={() => setSearchOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-[var(--color-brand)] transition-all">
+                <Search size={13} />
+                搜索
               </button>
             </div>
           )}

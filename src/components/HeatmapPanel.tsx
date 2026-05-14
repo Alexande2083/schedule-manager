@@ -30,7 +30,7 @@ const CELL = 14;
 const GAP = 3;
 
 // Compact mode uses smaller cells
-const COMPACT_CELL = 10;
+const COMPACT_CELL = 8;
 const COMPACT_GAP = 2;
 
 /** 根据连续天数和总完成数生成成就描述 */
@@ -120,7 +120,7 @@ export function HeatmapPanel({ tasks, compact }: HeatmapPanelProps) {
     return (
       <div className="w-full h-full flex flex-col">
         {/* Stats row — compact inline */}
-        <div className="flex items-center gap-3 mb-2 text-[10px]">
+        <div className="flex items-center gap-4 mb-2 text-[12px]">
           {[
             { icon: CheckCircle2, label: '总完成', value: stats.total, color: '#40c463' },
             { icon: Flame, label: '连续', value: `${stats.currStreak}天`, color: '#e87a30' },
@@ -128,8 +128,8 @@ export function HeatmapPanel({ tasks, compact }: HeatmapPanelProps) {
             { icon: TrendingUp, label: '周均', value: stats.weeklyAvg, color: '#5b8def' },
           ].map((item, i) => (
             <div key={i} className="flex items-center gap-1">
-              <item.icon size={10} style={{ color: item.color }} />
-              <span className="font-medium" style={{ color: item.color }}>{item.value}</span>
+              <item.icon size={13} style={{ color: item.color }} />
+              <span className="font-semibold" style={{ color: item.color }}>{item.value}</span>
               <span className="text-[var(--app-text-muted)]">{item.label}</span>
             </div>
           ))}
@@ -139,7 +139,7 @@ export function HeatmapPanel({ tasks, compact }: HeatmapPanelProps) {
         <svg
           viewBox={`0 0 ${svgW} ${svgH}`}
           preserveAspectRatio="xMidYMin meet"
-          className="flex-1 w-full"
+          className="w-full max-h-[150px]"
         >
           {/* Month headers */}
           {monthHeaders.map((m, i) => (

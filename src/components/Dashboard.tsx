@@ -3,6 +3,7 @@ import {
   CheckCircle2, Clock,
   ChevronLeft, ChevronRight, List, BarChart3,
   Sun, Moon, Cloud, Zap, ArrowRight, Target,
+  CircleDot, Trophy, Timer,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Task } from '@/types';
@@ -94,6 +95,14 @@ export const Dashboard = memo(function Dashboard({
   const completedTasks = filteredTasks.filter(t => t.completed);
   const completionRate = filteredTasks.length > 0
     ? Math.round((completedTasks.length / filteredTasks.length) * 100) : 0;
+  const selectedDateLabel = useMemo(() => {
+    const date = parseISO(selectedDate);
+    return `${format(date, 'M月d日')} · ${['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()]}`;
+  }, [selectedDate]);
+  const plannedMinutes = useMemo(() =>
+    pendingTasks.reduce((sum, task) => sum + (task.duration || 0), 0),
+    [pendingTasks]
+  );
 
   const handlePrevDay = () => {
     const d = parseISO(selectedDate); d.setDate(d.getDate() - 1);
@@ -159,33 +168,73 @@ export const Dashboard = memo(function Dashboard({
 
   const DAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
   const totalSchedulerMinutes = schedulerResult?.reduce((sum, t) => sum + t.duration, 0) || 0;
+  const summaryCards = [
+    {
+      label: '待办',
+      value: pendingTasks.length,
+      icon: CircleDot,
+      className: 'from-rose-50 to-orange-50 text-rose-600 border-rose-100',
+    },
+    {
+      label: '已完成',
+      value: completedToday,
+      icon: Trophy,
+      className: 'from-emerald-50 to-teal-50 text-emerald-600 border-emerald-100',
+    },
+    {
+      label: '预计',
+      value: plannedMinutes || 0,
+      suffix: 'min',
+      icon: Timer,
+      className: 'from-sky-50 to-indigo-50 text-sky-600 border-sky-100',
+    },
+  ];
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto space-y-6 animate-fade-in">
+    <div className="px-4 py-4 md:p-6 max-w-[1600px] mx-auto space-y-5 md:space-y-6 animate-fade-in">
       {/* ── Page Title ── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl">Today</h1>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            {pendingTasks.length} pending · {completedToday} completed · {completionRate}% done
-          </p>
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-raised)] px-4 py-4 shadow-sm md:px-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-brand)]">今日中心</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-normal text-[var(--color-text)] md:text-3xl">{selectedDateLabel}</h1>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+              把今天的事放在一个清楚的工作台里
+            </p>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button onClick={handlePrevDay} className="btn-ghost" aria-label="前一天"><ChevronLeft size={16} /></button>
+            <button onClick={handleNextDay} className="btn-ghost" aria-label="后一天"><ChevronRight size={16} /></button>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <button onClick={handlePrevDay} className="btn-ghost"><ChevronLeft size={16} /></button>
-          <button onClick={handleNextDay} className="btn-ghost"><ChevronRight size={16} /></button>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {summaryCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <div key={card.label} className={cn('rounded-xl border bg-gradient-to-br px-3 py-2.5 shadow-sm', card.className)}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-medium opacity-80">{card.label}</p>
+                  <Icon size={13} className="opacity-75" />
+                </div>
+                <p className="mt-1 text-lg font-semibold">
+                  {card.value}<span className="ml-0.5 text-[10px] font-medium opacity-70">{card.suffix}</span>
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* ── Row 1: Task List (primary) + Calendar sidebar ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Tasks — 2/3 width */}
-        <div className="xl:col-span-2 card" style={{ padding: 'var(--space-6)' }}>
-          <div className="flex items-center justify-between mb-4">
+        <div className="xl:col-span-2 card dashboard-primary-card" style={{ padding: 'var(--space-6)' }}>
+          <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg">所有任务</h2>
-              <p className="text-xs text-[var(--color-text-muted)]">{pendingTasks.length} pending · {completedTasks.length} completed</p>
+              <h2 className="text-lg font-semibold">今日任务</h2>
+              <p className="text-xs text-[var(--color-text-muted)]">{pendingTasks.length} 个待办 · {completedTasks.length} 个完成 · {completionRate}%</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-start sm:self-auto">
               <div className="flex items-center bg-[var(--color-bg)] rounded-btn border border-[var(--color-border)] p-0.5">
                   <button onClick={() => onChangeDisplayMode('list')}
                     className={cn('px-3 py-1.5 rounded-btn text-xs font-medium transition-colors duration-fast',
@@ -402,7 +451,7 @@ export const Dashboard = memo(function Dashboard({
         </div>
 
         {/* Right: Charts */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 content-start">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 content-start">
           <div className="card" style={{ padding: 'var(--space-4)' }}>
             <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">完成趋势</p>
             <TaskTrendChart tasks={tasks} embedded />
@@ -411,7 +460,7 @@ export const Dashboard = memo(function Dashboard({
             <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">完成统计</p>
             <CompletionStatsPanel tasks={filteredTasks} projects={projects} />
           </div>
-          <div className="card" style={{ padding: 'var(--space-4)' }}>
+          <div className="card sm:col-span-2" style={{ padding: 'var(--space-4)' }}>
             <p className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-3">活跃热力图</p>
             <HeatmapPanel tasks={tasks} compact />
           </div>

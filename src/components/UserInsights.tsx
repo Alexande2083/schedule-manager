@@ -51,7 +51,7 @@ export function UserInsights({ insights }: UserInsightsProps) {
 
       {/* Profile Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 px-4 md:px-6 pb-3 md:pb-4">
-        <motion.div variants={item} className="saas-stats-card">
+        <motion.div variants={item} className="saas-stats-card bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-[var(--app-text-muted)]">最佳时段</span>
             <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
@@ -64,7 +64,7 @@ export function UserInsights({ insights }: UserInsightsProps) {
           <p className="text-xs text-[var(--app-text-muted)] mt-1">{profile.highEnergyWindow}</p>
         </motion.div>
 
-        <motion.div variants={item} className="saas-stats-card">
+        <motion.div variants={item} className="saas-stats-card bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-[var(--app-text-muted)]">完成率</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
@@ -75,7 +75,7 @@ export function UserInsights({ insights }: UserInsightsProps) {
           <p className="text-xs text-[var(--app-text-muted)] mt-1">总完成率</p>
         </motion.div>
 
-        <motion.div variants={item} className="saas-stats-card">
+        <motion.div variants={item} className="saas-stats-card bg-gradient-to-br from-rose-50 to-orange-50 border border-rose-100 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-[var(--app-text-muted)]">连续天数</span>
             <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center">
@@ -86,7 +86,7 @@ export function UserInsights({ insights }: UserInsightsProps) {
           <p className="text-xs text-[var(--app-text-muted)] mt-1">连续完成任务</p>
         </motion.div>
 
-        <motion.div variants={item} className="saas-stats-card">
+        <motion.div variants={item} className="saas-stats-card bg-gradient-to-br from-sky-50 to-indigo-50 border border-sky-100 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-[var(--app-text-muted)]">周容量</span>
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center">

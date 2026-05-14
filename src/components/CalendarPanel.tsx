@@ -13,15 +13,16 @@ interface CalendarPanelProps {
 }
 
 /** Get lunar day string and solar term (节气) for a given solar date */
-function getLunarInfo(solarDate: Date): { dayStr: string; term: string | null } {
+function getLunarInfo(solarDate: Date): { monthStr: string; dayStr: string; term: string | null } {
   try {
     const solar = Solar.fromDate(solarDate);
     const lunar = solar.getLunar();
+    const monthStr = lunar.getMonthInChinese();
     const dayStr = lunar.getDayInChinese(); // 初一、初二...三十
     const term = lunar.getJieQi(); // 节气名 or null
-    return { dayStr, term };
+    return { monthStr, dayStr, term };
   } catch {
-    return { dayStr: '', term: null };
+    return { monthStr: '', dayStr: '', term: null };
   }
 }
 
@@ -65,13 +66,13 @@ export function CalendarPanel({ tasks, selectedDate, onSelectDate, tags = {} }: 
       {(() => {
         const todayLunar = getLunarInfo(selectedDateObj);
         return (
-          <div className="mb-3">
+          <div className="mb-4">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-base font-bold text-[var(--app-text)]">{format(selectedDateObj, 'M月d日')}</span>
+              <span className="text-xl font-bold text-[var(--app-text)]">{format(selectedDateObj, 'M月d日')}</span>
               <span className="text-[10px] text-[var(--app-text-muted)]">{format(selectedDateObj, 'EEEE')}</span>
             </div>
-            <span className="text-[10px] text-[var(--app-text-muted)]">
-              {todayLunar.term ? `🌿 ${todayLunar.term}` : `农历${todayLunar.dayStr}`}
+            <span className="text-[11px] text-[var(--app-text-muted)]">
+              农历{todayLunar.monthStr}月{todayLunar.dayStr}{todayLunar.term ? ` · ${todayLunar.term}` : ''}
             </span>
           </div>
         );
@@ -95,17 +96,17 @@ export function CalendarPanel({ tasks, selectedDate, onSelectDate, tags = {} }: 
       </div>
 
       {/* Day headers */}
-      <div className="grid grid-cols-7 mb-0.5">
+      <div className="grid grid-cols-7 mb-1 rounded-lg bg-[var(--app-surface-hover)]/60 px-1 py-1">
         {['日', '一', '二', '三', '四', '五', '六'].map(d => (
           <span key={d} className="text-[9px] text-center text-[var(--app-text-muted)] py-0.5">{d}</span>
         ))}
       </div>
 
       {/* Days grid — compact */}
-      <div className="grid grid-cols-7 gap-px">
+      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-[var(--app-border)] bg-[var(--app-border)]/70 p-px">
         {days.map((day, idx) => {
           if (day === null) {
-            return <div key={`pad-${idx}`} className="h-9" />;
+            return <div key={`pad-${idx}`} className="h-9 bg-[var(--app-surface)]" />;
           }
           const dateStr = format(day, 'yyyy-MM-dd');
           const isSel = isSameDay(day, selectedDateObj);
@@ -123,8 +124,8 @@ export function CalendarPanel({ tasks, selectedDate, onSelectDate, tags = {} }: 
                 isSel
                   ? 'bg-[var(--app-accent)] text-white font-semibold shadow-sm'
                   : today
-                    ? 'text-[var(--app-text)] font-semibold border border-[var(--app-border)]'
-                    : 'text-[var(--app-text-secondary)] hover:bg-[var(--app-surface-hover)]'
+                    ? 'bg-[var(--app-surface)] text-[var(--app-text)] font-semibold ring-1 ring-inset ring-[var(--app-border-hover)]'
+                    : 'bg-[var(--app-surface)] text-[var(--app-text-secondary)] hover:bg-[var(--app-surface-hover)]'
               )}
             >
               {/* Date number */}

@@ -27,7 +27,7 @@ export function BackupReminder({ onOpenSync }: BackupReminderProps) {
   if (!visible) return null;
 
   return (
-    <div className="glass-panel mx-4 mt-2 px-4 py-2.5 rounded-xl border border-[var(--app-accent)]/20 bg-[var(--app-accent)]/5 flex items-center gap-3 text-xs">
+    <div className="fixed left-3 right-3 bottom-20 z-50 mx-auto max-w-[560px] px-4 py-2.5 rounded-xl border border-[var(--app-accent)]/20 bg-[var(--app-surface)]/95 shadow-lg backdrop-blur flex items-center gap-3 text-xs md:left-1/2 md:right-auto md:top-3 md:bottom-auto md:-translate-x-1/2 md:w-[560px]">
       <CloudDownload size={14} className="text-[var(--app-accent)] shrink-0" />
       <span className="text-[var(--app-text-secondary)] flex-1">
         建议定期导出备份数据，防止浏览器清理导致数据丢失

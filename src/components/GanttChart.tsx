@@ -23,6 +23,8 @@ const END_HOUR = 22;
 const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
 const TIME_AXIS_WIDTH = 52; // px
 const BODY_HEIGHT = 560; // px — more vertical space for task blocks
+const BODY_TOP_PADDING = 18;
+const BODY_BOTTOM_PADDING = 8;
 
 const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
@@ -57,7 +59,8 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
 
   const minutesToPx = (minutes: number) => {
     const relative = minutes - START_HOUR * 60;
-    return (relative / TOTAL_MINUTES) * BODY_HEIGHT;
+    const usableHeight = BODY_HEIGHT - BODY_TOP_PADDING - BODY_BOTTOM_PADDING;
+    return BODY_TOP_PADDING + (relative / TOTAL_MINUTES) * usableHeight;
   };
 
   // Horizontal wheel scroll handler
@@ -219,6 +222,7 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
             {ALL_HOURS.map((h, i) => {
               const px = minutesToPx(h * 60);
               const isLast = i === ALL_HOURS.length - 1;
+              const isFirst = i === 0;
               return (
                 <div
                   key={h}
@@ -229,7 +233,7 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
                   style={{
                     top: isLast ? undefined : `${px}px`,
                     bottom: isLast ? '4px' : undefined,
-                    transform: isLast ? 'none' : 'translateY(-50%)',
+                    transform: isLast || isFirst ? 'none' : 'translateY(-50%)',
                   }}
                 >
                   {h}点

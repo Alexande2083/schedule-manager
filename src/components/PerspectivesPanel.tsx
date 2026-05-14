@@ -119,7 +119,7 @@ export function PerspectivesPanel({}: PerspectivesPanelProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <div className="flex-1 flex flex-col min-w-0 overflow-hidden p-4 md:p-6">
       {!activePerspective ? (
         /* Perspective Grid */
         <div className="flex-1 overflow-y-auto min-h-0">

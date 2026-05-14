@@ -112,7 +112,7 @@ export function SyncFAB() {
   };
 
   return (
-    <div ref={ref} className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+    <div ref={ref} className="fixed bottom-36 right-4 z-50 flex flex-col items-end gap-2 md:bottom-6 md:right-6">
       {/* Menu */}
       {open && (
         <div className="flex flex-col overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-raised)] shadow-lg animate-fade-in">

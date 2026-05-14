@@ -121,13 +121,15 @@ export function AddTaskInput({ selectedDate, tags, projects, contexts, templates
             </div>
           )}
           {/* Time */}
-          <div className="flex items-center gap-1">
-            <Clock size={11} className="text-[var(--app-text-muted)]" />
+          <div className="flex items-center gap-1.5 rounded-full border border-[var(--app-border)] bg-[var(--app-input-bg)] px-2 py-1 shadow-xs">
+            <Clock size={12} className="text-[var(--app-accent)]" />
             <input
-              type="time"
+              type="text"
+              inputMode="numeric"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="text-[11px] bg-[var(--app-input-bg)] rounded-md px-1.5 py-0.5 outline-none border border-[var(--app-border)] text-[var(--app-text)] focus:border-[var(--app-accent)]"
+              placeholder="09:00"
+              className="w-[48px] bg-transparent text-center font-mono text-[11px] text-[var(--app-text)] outline-none placeholder:text-[var(--app-text-muted)]"
             />
           </div>
 
