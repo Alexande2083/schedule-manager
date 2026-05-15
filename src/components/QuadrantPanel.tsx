@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Clock, CheckCircle2, Settings } from 'lucide-react';
+import { Clock, CheckCircle2, LayoutGrid, Siren, Flag, Zap, Leaf } from 'lucide-react';
 import type { Task } from '@/types';
 import { QUADRANT_CONFIG } from '@/types';
 import { cn } from '@/lib/utils';
@@ -48,16 +48,24 @@ export function QuadrantPanel({ tasks, selectedDate, view, onToggleTask, onUpdat
     'not-important-not-urgent',
   ];
 
+  const quadrantIcons: Record<keyof typeof QUADRANT_CONFIG, { icon: React.ElementType; color: string }> = {
+    'important-urgent': { icon: Siren, color: '#ef4444' },
+    'important-not-urgent': { icon: Flag, color: '#d97706' },
+    'not-important-urgent': { icon: Zap, color: '#7c3aed' },
+    'not-important-not-urgent': { icon: Leaf, color: '#16a34a' },
+  };
+
   return (
     <div className="glass-panel bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] p-3 shadow-sm overflow-y-auto">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xs font-semibold text-[var(--app-text-secondary)] tracking-wide">四象限</h3>
-        <Settings size={11} className="text-[var(--app-text-muted)]" />
+        <LayoutGrid size={12} className="text-[var(--app-text-muted)]" />
       </div>
 
       <div className="grid grid-cols-2 gap-1">
         {quadrants.map((key) => {
           const config = QUADRANT_CONFIG[key];
+          const QuadrantIcon = quadrantIcons[key].icon;
           const quadrantTasks = filteredTasks.filter(t => getQuadrantKey(t) === key);
           const isExpanded = expandedQuadrant === key;
 
@@ -74,7 +82,8 @@ export function QuadrantPanel({ tasks, selectedDate, view, onToggleTask, onUpdat
               onClick={() => setExpandedQuadrant(isExpanded ? null : key)}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className={cn('text-[9px] font-semibold', isDark ? config.textColorDark : config.textColor)}>
+                <span className={cn('flex items-center gap-1 text-[9px] font-semibold', isDark ? config.textColorDark : config.textColor)}>
+                  <QuadrantIcon size={10} style={{ color: quadrantIcons[key].color }} />
                   {config.label}
                 </span>
                 <span className={cn('text-[9px] font-bold px-1 py-0.5 rounded-full', isDark ? 'bg-black/30' : 'bg-white/60', isDark ? config.textColorDark : config.textColor)}>
@@ -99,7 +108,7 @@ export function QuadrantPanel({ tasks, selectedDate, view, onToggleTask, onUpdat
                       }}
                       className="w-3 h-3 rounded border border-[var(--app-border)] flex items-center justify-center shrink-0 hover:border-[var(--app-accent)]"
                     >
-                      {task.completed && <CheckCircle2 size={8} className="text-[#8cc68a]" />}
+                      {task.completed && <CheckCircle2 size={8} className="text-[var(--app-accent)]" />}
                     </button>
                     <span className="truncate">{task.title}</span>
                     {task.deadline && (

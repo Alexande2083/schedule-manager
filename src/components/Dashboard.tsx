@@ -1,9 +1,9 @@
 import { useMemo, memo, useCallback, useState } from 'react';
 import {
-  CheckCircle2, Clock,
+  Check, CheckCircle2, Clock,
   ChevronLeft, ChevronRight, List, BarChart3,
   Sun, Moon, Cloud,
-  CircleDot, Trophy, Timer,
+  CircleDot, Trophy, Timer, LayoutGrid, Siren, Flag, Zap, Leaf,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Task } from '@/types';
@@ -141,10 +141,10 @@ export const Dashboard = memo(function Dashboard({
 
   const quadrantGroups = useMemo(() => {
     const base = [
-      { key: 'important-urgent', title: '重要紧急', tint: '#fee2e2', tasks: [] as Task[] },
-      { key: 'important-normal', title: '重要不紧急', tint: '#fef3c7', tasks: [] as Task[] },
-      { key: 'normal-urgent', title: '紧急不重要', tint: '#ede9fe', tasks: [] as Task[] },
-      { key: 'normal-normal', title: '不重要不紧急', tint: '#dcfce7', tasks: [] as Task[] },
+      { key: 'important-urgent', title: '重要紧急', tint: '#fee2e2', icon: Siren, iconColor: '#ef4444', tasks: [] as Task[] },
+      { key: 'important-normal', title: '重要不紧急', tint: '#fef3c7', icon: Flag, iconColor: '#d97706', tasks: [] as Task[] },
+      { key: 'normal-urgent', title: '紧急不重要', tint: '#ede9fe', icon: Zap, iconColor: '#7c3aed', tasks: [] as Task[] },
+      { key: 'normal-normal', title: '不重要不紧急', tint: '#dcfce7', icon: Leaf, iconColor: '#16a34a', tasks: [] as Task[] },
     ];
     filteredTasks.forEach(task => {
       if (task.importance === 'important' && task.urgency === 'urgent') base[0].tasks.push(task);
@@ -356,15 +356,22 @@ export const Dashboard = memo(function Dashboard({
           <div className="border-t border-[var(--color-border)] px-6 py-4">
             <div className="rounded-card border border-[var(--color-border)] p-4" style={{ background: 'var(--color-bg-raised)' }}>
               <div className="flex items-center gap-2 mb-3">
-                <CloverIcon />
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                  <LayoutGrid size={14} />
+                </div>
                 <span className="text-xs font-semibold text-[var(--color-text)]">四象限</span>
                 <span className="text-[10px] text-[var(--color-text-muted)]">{pendingTodayCount} 个待办</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {quadrantGroups.map(group => (
+                {quadrantGroups.map(group => {
+                  const GroupIcon = group.icon;
+                  return (
                   <div key={group.key} className="min-h-[120px] rounded-xl border p-3" style={{ background: group.tint, borderColor: 'rgba(15,23,42,0.08)' }}>
                     <div className="mb-2 flex items-center justify-between">
-                      <p className="text-xs font-semibold text-slate-700">{group.title}</p>
+                      <p className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                        <GroupIcon size={13} style={{ color: group.iconColor }} />
+                        {group.title}
+                      </p>
                       <span className="text-[10px] text-slate-500">{group.tasks.length}</span>
                     </div>
                     <div className="space-y-1.5">
@@ -376,10 +383,12 @@ export const Dashboard = memo(function Dashboard({
                             onClick={() => onToggleTask(task.id)}
                             className={cn(
                               'h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0 bg-white',
-                              task.completed ? 'border-slate-300' : 'border-slate-300 hover:border-slate-400'
+                              task.completed ? 'border-[var(--color-brand)]/40' : 'border-slate-300 hover:border-slate-400'
                             )}
                             aria-label={task.completed ? '标记未完成' : '标记完成'}
-                          />
+                          >
+                            {task.completed && <Check size={10} strokeWidth={3} className="text-[var(--color-brand)]" />}
+                          </button>
                           <button
                             onClick={() => onOpenEdit(task)}
                             className={cn('min-w-0 flex-1 truncate text-left text-[11px] text-slate-700', task.completed && 'line-through text-slate-400')}
@@ -390,7 +399,8 @@ export const Dashboard = memo(function Dashboard({
                       ))}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -415,25 +425,3 @@ export const Dashboard = memo(function Dashboard({
     </div>
   );
 });
-
-function CloverIcon() {
-  const leaves = [
-    { className: 'left-1 top-0 rounded-tl-full rounded-br-full', color: '#fca5a5' },
-    { className: 'right-1 top-0 rounded-tr-full rounded-bl-full', color: '#fde68a' },
-    { className: 'left-1 bottom-0 rounded-bl-full rounded-tr-full', color: '#c4b5fd' },
-    { className: 'right-1 bottom-0 rounded-br-full rounded-tl-full', color: '#86efac' },
-  ];
-
-  return (
-    <div className="relative h-6 w-6 shrink-0" aria-hidden="true">
-      {leaves.map((leaf, index) => (
-        <span
-          key={index}
-          className={cn('absolute h-3 w-3', leaf.className)}
-          style={{ background: leaf.color }}
-        />
-      ))}
-      <span className="absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/90" />
-    </div>
-  );
-}

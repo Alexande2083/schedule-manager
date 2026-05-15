@@ -2,7 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import {
   Trash2, Clock, Tag, GripVertical, FolderOpen, Flag,
   AlertTriangle, Calendar, ChevronDown, ChevronRight, Square, CheckSquare,
-  Monitor, Smartphone, Building2, Car, Users, Home, Link2
+  Monitor, Smartphone, Building2, Car, Users, Home, Link2, Check
 } from 'lucide-react';
 import { format, parseISO, isToday, isPast, differenceInDays } from 'date-fns';
 import type { Task, Context } from '@/types';
@@ -145,10 +145,13 @@ export function TaskItem({
           className={cn(
             'mt-0.5 w-[18px] h-[18px] rounded-md border-2 flex items-center justify-center transition-all duration-200 shrink-0 bg-white',
             task.completed
-              ? 'border-[var(--app-border)]'
+              ? 'border-[var(--app-accent)]/40'
               : 'border-[var(--app-border)] hover:border-[var(--app-accent)]'
           )}
-        />
+          aria-label={task.completed ? '标记未完成' : '标记完成'}
+        >
+          {task.completed && <Check size={13} strokeWidth={3} className="text-[var(--app-accent)]" />}
+        </button>
 
         <div className="flex-1 min-w-0">
           {isEditing ? (

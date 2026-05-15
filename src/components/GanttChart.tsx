@@ -22,9 +22,11 @@ const START_HOUR = 6;
 const END_HOUR = 22;
 const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
 const TIME_AXIS_WIDTH = 52; // px
-const BODY_HEIGHT = 560; // px — more vertical space for task blocks
-const BODY_TOP_PADDING = 18;
-const BODY_BOTTOM_PADDING = 8;
+const HEADER_HEIGHT = 46;
+const BODY_HEIGHT = 500; // px — compact full-day view without vertical scrolling
+const BODY_TOP_PADDING = 10;
+const BODY_BOTTOM_PADDING = 6;
+const MIN_PROJECT_COLUMN_WIDTH = 98; // px — about 8 columns in the current panel width
 
 const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
 
@@ -108,10 +110,14 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
     setDraggedProjectId(null);
   };
 
-  // Active projects: show ALL projects (including uncategorized)
+  // Active projects: only show projects that have timed tasks on the selected day.
   const activeProjects = useMemo(() => {
     const result: (Project | { id: 'none'; name: '未分类'; color: string })[] = [];
-    projects.forEach(p => result.push(p));
+    projects.forEach(p => {
+      if (dayTasks.some(t => t.projectId === p.id)) {
+        result.push(p);
+      }
+    });
     if (dayTasks.some(t => !t.projectId)) {
       result.push({ id: 'none', name: '未分类', color: '#9ca3af' });
     }
@@ -120,7 +126,7 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
 
   // Grid column definition: time axis + one column per project
   const gridColumns = useMemo(() => {
-    return `${TIME_AXIS_WIDTH}px repeat(${activeProjects.length}, minmax(180px, 1fr))`;
+    return `${TIME_AXIS_WIDTH}px repeat(${activeProjects.length}, minmax(${MIN_PROJECT_COLUMN_WIDTH}px, 1fr))`;
   }, [activeProjects.length]);
 
   // Group tasks by project, then by time overlap within each column
@@ -178,16 +184,19 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
   }
 
   return (
-    <div className="bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] shadow-sm overflow-hidden flex flex-col h-[600px]">
+    <div className="bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] shadow-sm overflow-hidden flex flex-col h-[548px]">
       {/* Single unified scrollable grid — header + body in one container */}
-      <div className="flex-1 min-h-0 overflow-auto" onWheel={handleWheel}>
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden" onWheel={handleWheel}>
         <div
           className="grid"
           style={{ gridTemplateColumns: gridColumns }}
         >
           {/* ===== Row 0: Sticky Header ===== */}
           {/* Corner cell (sticky top-left) */}
-          <div className="sticky top-0 left-0 z-30 h-9 bg-[var(--app-surface-hover)] border-r border-b border-[var(--app-border)] flex items-center justify-center">
+          <div
+            className="sticky top-0 left-0 z-30 bg-[var(--app-surface-hover)] border-r border-b border-[var(--app-border)] flex items-center justify-center"
+            style={{ height: HEADER_HEIGHT }}
+          >
             <Clock size={12} className="text-[var(--app-text-muted)]" />
           </div>
           {/* Project header cells (sticky top) — draggable for reordering */}
@@ -195,10 +204,11 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
             <div
               key={`h-${p.id}`}
               className={cn(
-                'sticky top-0 z-20 h-9 bg-[var(--app-surface-hover)] border-r border-b border-[var(--app-border)] last:border-r-0 flex items-center justify-center gap-1 px-1',
+                'sticky top-0 z-20 bg-[var(--app-surface-hover)] border-r border-b border-[var(--app-border)] last:border-r-0 grid grid-cols-[8px_minmax(0,1fr)_auto] items-center gap-1.5 px-2',
                 p.id !== 'none' && 'cursor-grab active:cursor-grabbing hover:bg-[var(--app-border)]/30',
                 draggedProjectId === p.id && 'opacity-40'
               )}
+              style={{ height: HEADER_HEIGHT }}
               title={p.id === 'none' ? `${p.name}` : `拖拽可排序 · ${p.name} (${dayTasks.filter(t => (p.id === 'none' ? !t.projectId : t.projectId === p.id)).length})`}
               draggable={p.id !== 'none'}
               onDragStart={e => handleProjectDragStart(e, p.id)}
@@ -206,7 +216,17 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
               onDrop={e => handleProjectDrop(e, p.id)}
             >
               <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-              <span className="text-[11px] text-[var(--app-text-secondary)] truncate">{p.name}</span>
+              <span
+                className="text-[10px] text-[var(--app-text-secondary)] text-center leading-[1.15] overflow-hidden"
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {p.name}
+              </span>
               <span className="text-[10px] text-[var(--app-text-muted)] shrink-0">
                 {dayTasks.filter(t => (p.id === 'none' ? !t.projectId : t.projectId === p.id)).length}
               </span>
@@ -274,8 +294,8 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
                 {/* Task blocks inside this column */}
                 {colTasks.map((task) => {
                   const topPx = minutesToPx(task.startMinutes);
-                  const rawHeight = ((task.endMinutes - task.startMinutes) / TOTAL_MINUTES) * BODY_HEIGHT;
-                  const heightPx = Math.max(rawHeight, 36);
+                  const rawHeight = minutesToPx(task.endMinutes) - minutesToPx(task.startMinutes);
+                  const heightPx = Math.max(rawHeight, 28);
                   const colWidth = 100 / task.colTotal;
                   const leftPercent = task.colIndex * colWidth;
 
@@ -291,15 +311,15 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
                         height: `${heightPx}px`,
                         backgroundColor: p.color,
                         opacity: task.completed ? 0.48 : 1,
-                        minHeight: '36px',
+                        minHeight: '28px',
                       }}
                       title={`${task.title} (${task.time} - ${task.duration || 60}分钟)`}
                     >
                       <div className="px-2 py-1 flex flex-col h-full justify-center min-h-0 overflow-hidden">
-                        <span className={cn('text-[11px] font-semibold text-white truncate leading-tight', task.completed && 'line-through')}>
+                        <span className={cn('text-[10px] font-semibold text-white truncate leading-tight', task.completed && 'line-through')}>
                           {task.title}
                         </span>
-                        <span className="text-[9px] text-white/80 mt-0.5">
+                        <span className="text-[9px] text-white/80 leading-none mt-0.5">
                           {task.time}
                         </span>
                       </div>
@@ -326,7 +346,7 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
                       style={{ width: '100%', height: BODY_HEIGHT }}
                     >
                       {arrows.map(({ from, to }, i) => {
-                        const fromTop = minutesToPx(from.startMinutes) + Math.max(((from.endMinutes - from.startMinutes) / TOTAL_MINUTES) * BODY_HEIGHT, 28) / 2;
+                        const fromTop = minutesToPx(from.startMinutes) + Math.max(minutesToPx(from.endMinutes) - minutesToPx(from.startMinutes), 28) / 2;
                         const toTop = minutesToPx(to.startMinutes);
                         const fromColWidth = 100 / from.colTotal;
                         const toColWidth = 100 / to.colTotal;

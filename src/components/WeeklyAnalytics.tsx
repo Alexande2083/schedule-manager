@@ -310,8 +310,46 @@ export function WeeklyAnalytics({
       {/* ══════ Module 2: Weekly Heatmap ══════ */}
       <Section title="活跃热力图" icon={Flame}>
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.85fr)] gap-4">
-          <div className="overflow-x-auto" style={{ touchAction: 'pan-x' }}>
-            <HeatmapPanel tasks={tasks} />
+          <div className="space-y-4 min-w-0">
+            <div className="overflow-x-auto" style={{ touchAction: 'pan-x' }}>
+              <HeatmapPanel tasks={tasks} />
+            </div>
+            <div
+              className="rounded-xl border p-3 md:p-4"
+              style={{ background: 'var(--color-bg)', borderColor: 'var(--color-brand-ghost)' }}
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <Zap size={13} style={{ color: 'var(--color-brand)' }} />
+                <h3 className="text-xs font-medium" style={{ color: textMuted }}>空闲时间建议</h3>
+              </div>
+              {freeTimeSlots.length === 0 ? (
+                <p className="text-xs" style={{ color: textMuted }}>暂无长空闲时段，日程安排很充实！</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {freeTimeSlots.map((slot, i) => (
+                    <div
+                      key={i}
+                      className="rounded-xl border p-4 flex items-start gap-3 transition-all hover:shadow-sm"
+                      style={{
+                        background: 'linear-gradient(135deg, var(--color-brand-ghost), transparent)',
+                        borderColor: 'var(--color-brand-ghost)',
+                      }}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: 'var(--color-brand-ghost)', color: 'var(--color-brand)' }}
+                      >
+                        <Zap size={14} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium" style={{ color: textColor }}>{slot.day} · {slot.label}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-brand)' }}>{slot.suggestion}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <WeeklyReviewContent
             completionRate={completionRate}
@@ -326,35 +364,8 @@ export function WeeklyAnalytics({
         </div>
       </Section>
 
-      {/* ══════ Module 5: Free Time Suggestions ══════ */}
-      <Section title="空闲时间建议" icon={Zap} accent>
-        {freeTimeSlots.length === 0 ? (
-          <p className="text-xs" style={{ color: textMuted }}>暂无长空闲时段 — 日程安排很充实！</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {freeTimeSlots.map((slot, i) => (
-              <div key={i}
-                className="rounded-xl border p-4 flex items-start gap-3 transition-all hover:shadow-sm"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(139,92,246,0.06), transparent)',
-                  borderColor: 'rgba(139,92,246,0.2)',
-                }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: 'rgba(139,92,246,0.12)', color: '#8b5cf6' }}>
-                  <Zap size={14} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium" style={{ color: textColor }}>{slot.day} · {slot.label}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-accent-purple)' }}>{slot.suggestion}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Section>
-
-      {/* ══════ Module 3 + 4: Time Allocation + Trends ─ two column on desktop ══════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ══════ Module 3 + 7: Time Allocation + Week Timeline ─ two column on desktop ══════ */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Module 3: Time Allocation */}
         <Section title="时间分配" icon={Clock} noPad>
           <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_240px] gap-3 p-4 md:p-5 pt-0 md:pt-0">
@@ -406,6 +417,54 @@ export function WeeklyAnalytics({
           </div>
         </Section>
 
+        {/* Module 7: Week Timeline */}
+        <Section title="本周节奏" icon={Calendar} noPad>
+          <div className="space-y-1.5 p-4 md:p-5 pt-0 md:pt-0">
+            {weekTimeline.map((day, i) => {
+              const progress = Math.min(100, (day.completed / Math.max(day.count, 1)) * 100);
+              return (
+                <button
+                  key={i}
+                  onClick={() => onSelectDate(day.date)}
+                  className="flex items-center gap-3 w-full py-1.5 px-3 rounded-lg transition-all hover:shadow-sm text-left"
+                  style={{ background: 'var(--color-bg)' }}
+                >
+                  <div className="w-9 text-center shrink-0">
+                    <p className="text-[10px]" style={{ color: textMuted }}>{day.label}</p>
+                    <p className="text-sm font-semibold" style={{ color: textColor }}>{format(parseISO(day.date), 'd')}</p>
+                  </div>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-hover)' }}>
+                    {day.count > 0 && (
+                      <div
+                        className="h-full rounded-full weekly-rhythm-fill"
+                        style={{
+                          width: `${progress}%`,
+                          background: 'var(--color-brand)',
+                          opacity: 0.75,
+                          animationDelay: `${i * 55}ms`,
+                        }}
+                      />
+                    )}
+                  </div>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0"
+                    style={{ background: 'var(--color-brand-ghost)', color: 'var(--color-brand)' }}
+                  >
+                    {day.dominantLabel}
+                  </span>
+                  <span className="text-[10px] shrink-0 w-7 text-right" style={{ color: textMuted }}>
+                    {day.completed}/{day.count}
+                  </span>
+                  <ArrowRight size={12} style={{ color: textMuted }} />
+                </button>
+              );
+            })}
+          </div>
+        </Section>
+      </div>
+
+      {/* ══════ Module 4: Productivity Trends ══════ */}
+      <div>
         {/* Module 4: Productivity Trends */}
         <Section title="效率趋势" icon={TrendingUp}>
           <div className="h-[190px]">
@@ -442,49 +501,6 @@ export function WeeklyAnalytics({
                 <span>{tip}</span>
               </div>
             ))}
-          </div>
-        </Section>
-      </div>
-
-      {/* ══════ Module 7: Week Timeline ══════ */}
-      <div>
-        {/* Module 7: Week Timeline */}
-        <Section title="本周节奏" icon={Calendar}>
-          <div className="space-y-2">
-            {weekTimeline.map((day, i) => {
-              const tagColor = tags[day.dominantTag]?.color || COLOR_PALETTE[i % COLOR_PALETTE.length];
-              return (
-                <button
-                  key={i}
-                  onClick={() => onSelectDate(day.date)}
-                  className="flex items-center gap-3 w-full py-2 px-3 rounded-lg transition-all hover:shadow-sm text-left"
-                  style={{ background: 'var(--color-bg)' }}
-                >
-                  <div className="w-10 text-center shrink-0">
-                    <p className="text-[10px]" style={{ color: textMuted }}>{day.label}</p>
-                    <p className="text-sm font-semibold" style={{ color: textColor }}>{format(parseISO(day.date), 'd')}</p>
-                  </div>
-                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-hover)' }}>
-                    {day.count > 0 && (
-                      <div className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${Math.min(100, (day.completed / Math.max(day.count, 1)) * 100)}%`,
-                          background: tagColor,
-                          opacity: 0.7,
-                        }} />
-                    )}
-                  </div>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0"
-                    style={{ background: tagColor + '20', color: tagColor }}>
-                    {day.dominantLabel}
-                  </span>
-                  <span className="text-[10px] shrink-0 w-7 text-right" style={{ color: textMuted }}>
-                    {day.completed}/{day.count}
-                  </span>
-                  <ArrowRight size={12} style={{ color: textMuted }} />
-                </button>
-              );
-            })}
           </div>
         </Section>
       </div>

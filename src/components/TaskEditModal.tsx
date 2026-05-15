@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  X, Check, Clock, Tag, FolderOpen, Flag, AlertTriangle, Calendar,
+  X, Check, Tag, FolderOpen, Flag, AlertTriangle, Calendar,
   RotateCcw, Monitor, Smartphone, Building2, Car, Users, Home, GitBranch, Repeat, Link2,
   Eye, Edit3,
 } from 'lucide-react';
@@ -197,35 +197,29 @@ export function TaskEditModal({ isOpen, onClose, task }: TaskEditModalProps) {
             />
           </div>
 
-          {/* Date, Time(15min), Duration */}
+          {/* Date, Time, Duration */}
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="text-xs font-medium text-[var(--app-text-muted)] mb-1.5 block">日期</label>
-              <div className="flex items-center gap-1.5">
-                <Calendar size={14} className="text-[var(--app-text-muted)] shrink-0" />
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="flex-1 text-xs bg-[var(--app-input-bg)] rounded-lg px-2 py-2 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)]"
-                />
-              </div>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full text-xs bg-[var(--app-input-bg)] rounded-lg px-2 py-2 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)]"
+              />
             </div>
             <div>
-              <label className="text-xs font-medium text-[var(--app-text-muted)] mb-1.5 block">时间（15分钟）</label>
-              <div className="flex items-center gap-1.5">
-                <Clock size={14} className="text-[var(--app-text-muted)] shrink-0" />
-                <select
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  className="flex-1 text-xs bg-[var(--app-input-bg)] rounded-lg px-2 py-2 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)]"
-                >
-                  <option value="">无</option>
-                  {timeOptions.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
+              <label className="text-xs font-medium text-[var(--app-text-muted)] mb-1.5 block">时间</label>
+              <select
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="w-full text-xs bg-[var(--app-input-bg)] rounded-lg px-2 py-2 border border-[var(--app-border)] text-[var(--app-text)] outline-none focus:border-[var(--app-accent)]"
+              >
+                <option value="">无</option>
+                {timeOptions.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-xs font-medium text-[var(--app-text-muted)] mb-1.5 block">时长</label>

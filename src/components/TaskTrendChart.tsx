@@ -16,9 +16,9 @@ type ViewMode = 'week' | 'month';
 export function TaskTrendChart({ tasks, embedded = false }: TaskTrendChartProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('week');
 
-  const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
-  const barColor = isDark ? '#7a9bc4' : '#9db3d4';
-  const lineColor = isDark ? 'var(--app-accent)' : 'var(--app-accent)';
+  const barColor = 'var(--color-brand-ghost)';
+  const lineColor = 'var(--app-accent)';
+  const barStrokeColor = 'var(--app-accent)';
 
   const data = useMemo(() => {
     const today = new Date();
@@ -106,7 +106,7 @@ export function TaskTrendChart({ tasks, embedded = false }: TaskTrendChartProps)
         {/* Legend */}
         <div className="flex items-center gap-3 mb-1.5 text-[10px]">
           <div className="flex items-center gap-1">
-            <div className="w-2.5 h-2 rounded-sm" style={{ backgroundColor: barColor }} />
+            <div className="w-2.5 h-2 rounded-sm border" style={{ backgroundColor: barColor, borderColor: barStrokeColor }} />
             <span className="text-[var(--app-text-muted)]">设定</span>
           </div>
           <div className="flex items-center gap-1">
@@ -150,7 +150,7 @@ export function TaskTrendChart({ tasks, embedded = false }: TaskTrendChartProps)
               }}
               cursor={{ fill: 'var(--app-surface-hover)', opacity: 0.5 }}
             />
-            <Bar dataKey="bar" fill={barColor} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="bar" fill={barColor} stroke={barStrokeColor} strokeOpacity={0.35} radius={[3, 3, 0, 0]} />
             <Line
               type="monotone"
               dataKey="line"
@@ -209,7 +209,7 @@ export function TaskTrendChart({ tasks, embedded = false }: TaskTrendChartProps)
       {/* Legend */}
       <div className="flex items-center gap-4 mb-3 text-xs">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-2.5 rounded-sm" style={{ backgroundColor: barColor }} />
+          <div className="w-3 h-2.5 rounded-sm border" style={{ backgroundColor: barColor, borderColor: barStrokeColor }} />
           <span className="text-[var(--app-text-muted)]">设定任务</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -255,7 +255,7 @@ export function TaskTrendChart({ tasks, embedded = false }: TaskTrendChartProps)
             }}
             cursor={{ fill: 'var(--app-surface-hover)', opacity: 0.5 }}
           />
-          <Bar dataKey="bar" fill={barColor} radius={[4, 4, 0, 0]} />
+          <Bar dataKey="bar" fill={barColor} stroke={barStrokeColor} strokeOpacity={0.35} radius={[4, 4, 0, 0]} />
           <Line
             type="monotone"
             dataKey="line"

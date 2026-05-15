@@ -7,20 +7,17 @@ interface CompletionStatsPanelProps {
   projects: Project[];
 }
 
-const THEME_COLORS = ['#d4857a', '#7ec9a8', '#9db3d4', '#e0b87a', '#b8a0d4', '#f0a0a0'];
-const DARK_COLORS = ['#d4857a', '#5ab88a', '#7a9bc4', '#c8a060', '#a080c4', '#d08080'];
+const PROJECT_BAR_OPACITIES = [1, 0.82, 0.68, 0.54, 0.42, 0.32];
 
 export function CompletionStatsPanel({ tasks, projects }: CompletionStatsPanelProps) {
-  const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'dark';
-
   const { completionPie, projectBar } = useMemo(() => {
     const total = tasks.length;
     const completed = tasks.filter(t => t.completed).length;
     const uncompleted = total - completed;
 
     const pieData = [];
-    if (completed > 0) pieData.push({ name: '已完成', value: completed, color: isDark ? DARK_COLORS[0] : THEME_COLORS[0] });
-    if (uncompleted > 0) pieData.push({ name: '未完成', value: uncompleted, color: isDark ? 'rgba(255,255,255,0.12)' : 'var(--app-border)' });
+    if (completed > 0) pieData.push({ name: '已完成', value: completed, color: 'var(--app-accent)' });
+    if (uncompleted > 0) pieData.push({ name: '未完成', value: uncompleted, color: 'var(--app-border)' });
 
     // Completed tasks by project
     const completedTasks = tasks.filter(t => t.completed);
@@ -31,17 +28,16 @@ export function CompletionStatsPanel({ tasks, projects }: CompletionStatsPanelPr
     });
 
     const barData = Object.entries(projectCounts)
-      .map(([pid, count]) => {
-        if (pid === 'none') return { name: '未分类', count, color: isDark ? DARK_COLORS[1] : THEME_COLORS[1] };
+      .map(([pid, count], idx) => {
+        if (pid === 'none') return { name: '未分类', count, opacity: PROJECT_BAR_OPACITIES[idx % PROJECT_BAR_OPACITIES.length] };
         const p = projects.find(pr => pr.id === pid);
-        const idx = projects.findIndex(pr => pr.id === pid) % THEME_COLORS.length;
-        return { name: p?.name || pid, count, color: isDark ? DARK_COLORS[idx] : THEME_COLORS[idx] };
+        return { name: p?.name || pid, count, opacity: PROJECT_BAR_OPACITIES[idx % PROJECT_BAR_OPACITIES.length] };
       })
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
 
     return { completionPie: pieData, projectBar: barData, total, completed };
-  }, [tasks, projects, isDark]);
+  }, [tasks, projects]);
 
   const completionRate = tasks.length > 0
     ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100)
@@ -130,7 +126,7 @@ export function CompletionStatsPanel({ tasks, projects }: CompletionStatsPanelPr
               />
               <Bar dataKey="count" radius={[3, 3, 0, 0]}>
                 {projectBar.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
+                  <Cell key={i} fill="var(--app-accent)" fillOpacity={entry.opacity} />
                 ))}
               </Bar>
             </BarChart>
