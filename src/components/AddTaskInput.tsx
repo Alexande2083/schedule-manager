@@ -3,6 +3,7 @@ import {
   Plus, Clock, Tag, FolderOpen, Flag, AlertTriangle, Calendar, StickyNote,
   Check, Monitor, Smartphone, Building2, Car, Users, Home,
 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { Task, Context } from '@/types';
 import type { Project } from '@/types';
 import type { TaskTemplate } from '@/hooks/useTaskTemplates';
@@ -12,6 +13,9 @@ import { cn } from '@/lib/utils';
 const CONTEXT_ICONS: Record<string, React.ElementType> = {
   Monitor, Smartphone, Building2, Car, Users, Home,
 };
+
+const CLOCK_HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
+const CLOCK_MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
 
 interface AddTaskInputProps {
   selectedDate: string;
@@ -34,6 +38,8 @@ export function AddTaskInput({ selectedDate, tags, projects, contexts, templates
   const [notes, setNotes] = useState('');
   const [selectedContexts, setSelectedContexts] = useState<string[]>([]);
   const [showOptions, setShowOptions] = useState(false);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [timePickerMode, setTimePickerMode] = useState<'hour' | 'minute'>('hour');
 
   const handleAdd = () => {
     if (!title.trim()) return;
@@ -67,6 +73,20 @@ export function AddTaskInput({ selectedDate, tags, projects, contexts, templates
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Enter') handleAdd();
+  };
+
+  const getTimeParts = () => {
+    const [rawHour = '9', rawMinute = '0'] = time.split(':');
+    const hour = Number(rawHour);
+    const minute = Number(rawMinute);
+    return {
+      hour: Number.isFinite(hour) ? Math.min(Math.max(hour, 0), 23) : 9,
+      minute: Number.isFinite(minute) ? Math.min(Math.max(minute, 0), 59) : 0,
+    };
+  };
+
+  const setClockTime = (hour: number, minute: number) => {
+    setTime(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
   };
 
   return (
@@ -121,17 +141,158 @@ export function AddTaskInput({ selectedDate, tags, projects, contexts, templates
             </div>
           )}
           {/* Time */}
-          <div className="flex items-center gap-1.5 rounded-full border border-[var(--app-border)] bg-[var(--app-input-bg)] px-2 py-1 shadow-xs">
-            <Clock size={12} className="text-[var(--app-accent)]" />
-            <input
-              type="text"
-              inputMode="numeric"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              placeholder="09:00"
-              className="w-[48px] bg-transparent text-center font-mono text-[11px] text-[var(--app-text)] outline-none placeholder:text-[var(--app-text-muted)]"
-            />
-          </div>
+          <Popover open={timePickerOpen} onOpenChange={(open) => {
+            setTimePickerOpen(open);
+            if (open) setTimePickerMode('hour');
+          }}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-medium shadow-xs transition-all',
+                  time
+                    ? 'border-[var(--app-accent)] bg-[var(--app-accent)]/10 text-[var(--app-accent)]'
+                    : 'border-[var(--app-border)] bg-[var(--app-input-bg)] text-[var(--app-text-muted)] hover:text-[var(--app-text)]'
+                )}
+              >
+                <Clock size={12} />
+                <span className="min-w-[34px] font-mono">{time || '时间'}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              sideOffset={8}
+              className="w-[276px] rounded-xl border-[var(--app-border)] bg-[var(--app-surface)] p-3 text-[var(--app-text)] shadow-xl"
+            >
+              {(() => {
+                const { hour, minute } = getTimeParts();
+                const period = hour >= 12 ? 'pm' : 'am';
+                const faceHour = hour % 12 || 12;
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center rounded-lg bg-[var(--app-input-bg)] p-1">
+                        {(['hour', 'minute'] as const).map((mode) => (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => setTimePickerMode(mode)}
+                            className={cn(
+                              'h-7 rounded-md px-3 text-xs font-semibold transition-all',
+                              timePickerMode === mode
+                                ? 'bg-[var(--app-accent)] text-white shadow-sm'
+                                : 'text-[var(--app-text-muted)] hover:text-[var(--app-text)]'
+                            )}
+                          >
+                            {mode === 'hour' ? '小时' : '分钟'}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex items-center rounded-lg bg-[var(--app-input-bg)] p-1">
+                        {(['am', 'pm'] as const).map((nextPeriod) => (
+                          <button
+                            key={nextPeriod}
+                            type="button"
+                            onClick={() => {
+                              const nextHour = nextPeriod === 'pm'
+                                ? (hour % 12) + 12
+                                : hour % 12;
+                              setClockTime(nextHour, minute);
+                            }}
+                            className={cn(
+                              'h-7 rounded-md px-2.5 text-[11px] font-semibold transition-all',
+                              period === nextPeriod
+                                ? 'bg-[var(--app-surface)] text-[var(--app-accent)] shadow-sm'
+                                : 'text-[var(--app-text-muted)] hover:text-[var(--app-text)]'
+                            )}
+                          >
+                            {nextPeriod === 'am' ? '上午' : '下午'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="text-center font-mono text-2xl font-semibold tracking-normal text-[var(--app-text)]">
+                      {String(hour).padStart(2, '0')}:{String(minute).padStart(2, '0')}
+                    </div>
+
+                    <div className="relative mx-auto h-48 w-48 rounded-full border border-[var(--app-border)] bg-[var(--app-input-bg)]">
+                      <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--app-accent)]" />
+                      <div
+                        className="absolute left-1/2 top-1/2 h-[70px] w-0.5 origin-bottom rounded-full bg-[var(--app-accent)]"
+                        style={{
+                          transform: `translate(-50%, -100%) rotate(${
+                            timePickerMode === 'hour'
+                              ? faceHour * 30
+                              : minute * 6
+                          }deg)`,
+                        }}
+                      />
+                      {(timePickerMode === 'hour' ? CLOCK_HOURS : CLOCK_MINUTES).map((value, index) => {
+                        const clockIndex = timePickerMode === 'hour' ? value % 12 : index;
+                        const angle = clockIndex * 30 - 90;
+                        const radius = 76;
+                        const x = Math.cos((angle * Math.PI) / 180) * radius;
+                        const y = Math.sin((angle * Math.PI) / 180) * radius;
+                        const isSelected = timePickerMode === 'hour'
+                          ? value === faceHour
+                          : value === Math.round(minute / 5) * 5;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => {
+                              if (timePickerMode === 'hour') {
+                                const nextHour = period === 'pm' ? (value % 12) + 12 : value % 12;
+                                setClockTime(nextHour, minute);
+                                setTimePickerMode('minute');
+                              } else {
+                                setClockTime(hour, value);
+                                setTimePickerOpen(false);
+                              }
+                            }}
+                            className={cn(
+                              'absolute flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold transition-all',
+                              isSelected
+                                ? 'bg-[var(--app-accent)] text-white shadow-md'
+                                : 'text-[var(--app-text-secondary)] hover:bg-[var(--app-surface)] hover:text-[var(--app-text)]'
+                            )}
+                            style={{
+                              left: `calc(50% + ${x}px)`,
+                              top: `calc(50% + ${y}px)`,
+                              transform: 'translate(-50%, -50%)',
+                            }}
+                          >
+                            {timePickerMode === 'hour' ? value : String(value).padStart(2, '0')}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTime('');
+                          setTimePickerOpen(false);
+                        }}
+                        className="rounded-md px-2 py-1 text-xs font-medium text-[var(--app-text-muted)] hover:bg-[var(--app-input-bg)] hover:text-[var(--app-text)]"
+                      >
+                        清除
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTimePickerOpen(false)}
+                        className="rounded-md bg-[var(--app-accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--app-accent-hover)]"
+                      >
+                        确定
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </PopoverContent>
+          </Popover>
 
           {/* Duration */}
           <div className="flex items-center gap-1">
