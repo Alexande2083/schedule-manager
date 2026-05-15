@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { format, startOfYear, differenceInCalendarDays, addDays } from 'date-fns';
 import { Trophy, Flame, CheckCircle2, TrendingUp } from 'lucide-react';
 import type { Task } from '@/types';
+import { cn } from '@/lib/utils';
 
 interface HeatmapPanelProps {
   tasks: Task[];
@@ -288,8 +289,17 @@ export function HeatmapPanel({ tasks, compact }: HeatmapPanelProps) {
                     else if (day.count >= 1) level = 1;
                     return (
                       <div key={di}
-                        className="cursor-pointer transition-all hover:ring-1 hover:ring-[var(--app-text)] shrink-0"
-                        style={{ width: CELL, height: CELL, borderRadius: 2, backgroundColor: palette[level] }}
+                        className={cn(
+                          'cursor-pointer transition-all hover:ring-1 hover:ring-[var(--app-text)] shrink-0',
+                          level > 0 && 'heatmap-cell-pop'
+                        )}
+                        style={{
+                          width: CELL,
+                          height: CELL,
+                          borderRadius: 2,
+                          backgroundColor: palette[level],
+                          animationDelay: level > 0 ? `${wi * 18 + di * 5}ms` : undefined,
+                        }}
                         title={`${format(day.date, 'yyyy-MM-dd')}: 完成 ${day.count} 个任务`}
                       />
                     );

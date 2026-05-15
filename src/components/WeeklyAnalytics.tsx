@@ -50,6 +50,31 @@ function getTagLabel(tag: string, tags?: Record<string, { label: string; color: 
   return tags?.[tag]?.label || TAG_LABEL_MAP[tag] || tag;
 }
 
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+function minutesToTime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function roundUpToStep(minutes: number, step = 15): number {
+  return Math.ceil(minutes / step) * step;
+}
+
+function getFreeTimeSuggestion(start: number, end: number): string {
+  const duration = end - start;
+  if (duration >= 180 && start < 12 * 60) return '适合安排深度工作';
+  if (duration >= 150 && start >= 14 * 60 && start < 18 * 60) return '适合处理学习或项目推进';
+  if (duration >= 120 && end <= 12 * 60) return '适合专注处理重要任务';
+  if (start >= 18 * 60) return '适合复盘、整理和明日规划';
+  if (duration < 120) return '适合处理零散待办';
+  return '适合安排一段完整任务';
+}
+
 // ─── Component ────────────────────────────────────
 
 export function WeeklyAnalytics({
@@ -110,6 +135,34 @@ export function WeeklyAnalytics({
     return { pieData, total };
   }, [learning.tagStats, tags]);
 
+  const timeAllocationSummary = useMemo(() => {
+    if (timeAllocation.pieData.length === 0 || timeAllocation.total === 0) {
+      return {
+        title: 'AI 时间观察',
+        points: ['本周还没有形成明显分配，完成一些任务后会自动总结投入方向。'],
+      };
+    }
+
+    const top = timeAllocation.pieData[0];
+    const second = timeAllocation.pieData[1];
+    const topShare = Math.round((top.value / timeAllocation.total) * 100);
+    const balanceText = topShare >= 70
+      ? `${top.name} 占比 ${topShare}%，本周精力非常集中。`
+      : topShare >= 45
+        ? `${top.name} 是主线，占比 ${topShare}%，节奏比较清晰。`
+        : `时间分布较均衡，${top.name} 占比 ${topShare}%。`;
+    const suggestion = second
+      ? `可以给 ${second.name} 预留一个固定时段，避免被主线任务挤掉。`
+      : topShare >= 70
+        ? '建议保留一段恢复时间，避免连续消耗。'
+        : '继续保持当前节奏，周末做一次轻复盘就够。';
+
+    return {
+      title: 'AI 时间观察',
+      points: [balanceText, suggestion],
+    };
+  }, [timeAllocation]);
+
   // ─── Module 4: Productivity Trends ───
   const trendData = useMemo(() => {
     return learning.weeklyTrend.map(d => ({
@@ -122,29 +175,63 @@ export function WeeklyAnalytics({
   const freeTimeSlots = useMemo(() => {
     const slots: { day: string; label: string; suggestion: string }[] = [];
     const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
     const ws = startOfWeek(today, { weekStartsOn: 1 });
     const days = eachDayOfInterval({ start: ws, end: endOfWeek(today, { weekStartsOn: 1 }) });
+    const WORK_START = 8 * 60;
+    const WORK_END = 20 * 60;
+    const TASK_BUFFER = 10;
+    const MIN_GAP = 90;
 
     days.forEach((day, i) => {
       const dateStr = format(day, 'yyyy-MM-dd');
-      const dayTasks = weekTasks.filter(t => t.date === dateStr && t.time);
-      const usedHours = new Set(dayTasks.map(t => parseInt(t.time!.split(':')[0])));
+      if (dateStr < todayStr) return;
 
-      // Find gaps > 2 hours
-      let gapStart = -1;
-      for (let h = 8; h <= 20; h++) {
-        if (!usedHours.has(h) && !usedHours.has(h + 1)) {
-          if (gapStart === -1) gapStart = h;
+      const currentMinutes = today.getHours() * 60 + today.getMinutes();
+      const windowStart = dateStr === todayStr
+        ? Math.max(WORK_START, roundUpToStep(currentMinutes))
+        : WORK_START;
+      if (windowStart >= WORK_END) return;
+
+      const busyRanges = weekTasks
+        .filter(t => t.date === dateStr && t.time)
+        .map(t => {
+          const start = timeToMinutes(t.time!);
+          const end = start + (t.duration || 60);
+          return {
+            start: Math.max(WORK_START, start - TASK_BUFFER),
+            end: Math.min(WORK_END, end + TASK_BUFFER),
+          };
+        })
+        .filter(range => range.end > windowStart && range.start < WORK_END)
+        .sort((a, b) => a.start - b.start);
+
+      const mergedRanges: { start: number; end: number }[] = [];
+      busyRanges.forEach(range => {
+        const last = mergedRanges[mergedRanges.length - 1];
+        if (!last || range.start > last.end) {
+          mergedRanges.push({ ...range });
         } else {
-          if (gapStart !== -1 && h - gapStart >= 2) {
-            slots.push({
-              day: DAY_LABELS_FULL[i],
-              label: `${String(gapStart).padStart(2, '0')}:00 – ${String(h).padStart(2, '0')}:00`,
-              suggestion: h <= 12 ? '适合深度工作' : h <= 17 ? '适合学习或会议' : '适合复盘规划',
-            });
-          }
-          gapStart = -1;
+          last.end = Math.max(last.end, range.end);
         }
+      });
+
+      let cursor = windowStart;
+      [...mergedRanges, { start: WORK_END, end: WORK_END }].forEach(range => {
+        const gapStart = Math.max(cursor, windowStart);
+        const gapEnd = Math.min(range.start, WORK_END);
+        if (gapEnd - gapStart >= MIN_GAP) {
+          slots.push({
+            day: DAY_LABELS_FULL[i],
+            label: `${minutesToTime(gapStart)} - ${minutesToTime(gapEnd)}`,
+            suggestion: getFreeTimeSuggestion(gapStart, gapEnd),
+          });
+        }
+        cursor = Math.max(cursor, range.end);
+      });
+
+      if (slots.length >= 5) {
+        return;
       }
     });
     return slots.slice(0, 5);
@@ -414,6 +501,30 @@ export function WeeklyAnalytics({
                 </div>
               )}
             </div>
+            <div
+              className="md:col-span-2 rounded-xl border p-4 flex gap-3 items-start animate-fade-in"
+              style={{
+                background: 'linear-gradient(135deg, var(--color-brand-ghost), transparent)',
+                borderColor: 'var(--color-brand-ghost)',
+              }}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: 'var(--color-brand-ghost)', color: 'var(--color-brand)' }}
+              >
+                <Brain size={15} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold mb-1" style={{ color: textColor }}>{timeAllocationSummary.title}</p>
+                <div className="space-y-1">
+                  {timeAllocationSummary.points.map((point, i) => (
+                    <p key={i} className="text-[11px] leading-relaxed" style={{ color: textSecondary }}>
+                      {point}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </Section>
 
@@ -553,13 +664,13 @@ function WeeklyReviewContent({
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <MiniAnalysis title="时段效率分析">
-          {(Object.entries(timeSlotStats) as [keyof typeof timeSlotStats, { total: number; completed: number; rate: number }][]).map(([slot, data]) => (
-            <MiniRate key={slot} label={slotLabels[slot]} value={`${data.rate}%`} sub={`${data.completed}/${data.total}`} rate={data.rate} />
+          {(Object.entries(timeSlotStats) as [keyof typeof timeSlotStats, { total: number; completed: number; rate: number }][]).map(([slot, data], i) => (
+            <MiniRate key={slot} label={slotLabels[slot]} value={`${data.rate}%`} sub={`${data.completed}/${data.total}`} rate={data.rate} delay={i * 70} />
           ))}
         </MiniAnalysis>
         <MiniAnalysis title="标签完成率">
-          {Object.entries(tagStats).sort(([, a], [, b]) => b.rate - a.rate).slice(0, 4).map(([tag, data]) => (
-            <MiniRate key={tag} label={data.label || tag} value={`${data.rate}%`} sub={`${data.completed}/${data.total}`} rate={data.rate} />
+          {Object.entries(tagStats).sort(([, a], [, b]) => b.rate - a.rate).slice(0, 4).map(([tag, data], i) => (
+            <MiniRate key={tag} label={data.label || tag} value={`${data.rate}%`} sub={`${data.completed}/${data.total}`} rate={data.rate} delay={i * 70} />
           ))}
         </MiniAnalysis>
       </div>
@@ -576,7 +687,7 @@ function MiniAnalysis({ title, children }: { title: string; children: React.Reac
   );
 }
 
-function MiniRate({ label, value, sub, rate }: { label: string; value: string; sub: string; rate: number }) {
+function MiniRate({ label, value, sub, rate, delay = 0 }: { label: string; value: string; sub: string; rate: number; delay?: number }) {
   return (
     <div>
       <div className="mb-1 flex items-center justify-between gap-2">
@@ -584,7 +695,10 @@ function MiniRate({ label, value, sub, rate }: { label: string; value: string; s
         <span className="text-[10px] tabular-nums" style={{ color: 'var(--color-text-muted)' }}>{value}</span>
       </div>
       <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--color-bg-hover)' }}>
-        <div className="h-full rounded-full bg-[var(--color-brand)]" style={{ width: `${rate}%` }} />
+        <div
+          className="h-full rounded-full bg-[var(--color-brand)] weekly-analysis-fill"
+          style={{ width: `${rate}%`, animationDelay: `${delay}ms` }}
+        />
       </div>
       <p className="mt-0.5 text-[9px]" style={{ color: 'var(--color-text-muted)' }}>{sub}</p>
     </div>

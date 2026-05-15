@@ -23,9 +23,6 @@ const END_HOUR = 22;
 const TOTAL_MINUTES = (END_HOUR - START_HOUR) * 60;
 const TIME_AXIS_WIDTH = 52; // px
 const HEADER_HEIGHT = 46;
-const BODY_HEIGHT = 500; // px — compact full-day view without vertical scrolling
-const BODY_TOP_PADDING = 10;
-const BODY_BOTTOM_PADDING = 6;
 const MIN_PROJECT_COLUMN_WIDTH = 98; // px — about 8 columns in the current panel width
 
 const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
@@ -59,10 +56,9 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
   const dayTasks = tasks.filter(t => t.date === selectedDate && t.time);
   const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null);
 
-  const minutesToPx = (minutes: number) => {
+  const minutesToPercent = (minutes: number) => {
     const relative = minutes - START_HOUR * 60;
-    const usableHeight = BODY_HEIGHT - BODY_TOP_PADDING - BODY_BOTTOM_PADDING;
-    return BODY_TOP_PADDING + (relative / TOTAL_MINUTES) * usableHeight;
+    return (relative / TOTAL_MINUTES) * 100;
   };
 
   // Horizontal wheel scroll handler
@@ -169,7 +165,7 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
     const now = new Date();
     const minutes = now.getHours() * 60 + now.getMinutes();
     if (minutes < START_HOUR * 60 || minutes > END_HOUR * 60) return null;
-    return minutesToPx(minutes);
+    return minutesToPercent(minutes);
   }, []);
 
   if (dayTasks.length === 0) {
@@ -184,12 +180,15 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
   }
 
   return (
-    <div className="bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] shadow-sm overflow-hidden flex flex-col h-[548px]">
+    <div className="bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] shadow-sm overflow-hidden flex flex-col h-full min-h-[548px]">
       {/* Single unified scrollable grid — header + body in one container */}
       <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden" onWheel={handleWheel}>
         <div
-          className="grid"
-          style={{ gridTemplateColumns: gridColumns }}
+          className="grid h-full"
+          style={{
+            gridTemplateColumns: gridColumns,
+            gridTemplateRows: `${HEADER_HEIGHT}px minmax(500px, 1fr)`,
+          }}
         >
           {/* ===== Row 0: Sticky Header ===== */}
           {/* Corner cell (sticky top-left) */}
@@ -237,10 +236,10 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
           {/* Time axis column (sticky left) */}
           <div
             className="sticky left-0 z-10 relative bg-[var(--app-surface-hover)] border-r border-[var(--app-border)]"
-            style={{ height: BODY_HEIGHT }}
+            style={{ minHeight: 500 }}
           >
             {ALL_HOURS.map((h, i) => {
-              const px = minutesToPx(h * 60);
+              const topPercent = minutesToPercent(h * 60);
               const isLast = i === ALL_HOURS.length - 1;
               const isFirst = i === 0;
               return (
@@ -251,7 +250,7 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
                     isLast && 'items-end'
                   )}
                   style={{
-                    top: isLast ? undefined : `${px}px`,
+                    top: isLast ? undefined : `${topPercent}%`,
                     bottom: isLast ? '4px' : undefined,
                     transform: isLast || isFirst ? 'none' : 'translateY(-50%)',
                   }}
@@ -269,16 +268,16 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
               <div
                 key={`b-${p.id}`}
                 className="relative border-r border-[var(--app-border)] last:border-r-0"
-                style={{ height: BODY_HEIGHT }}
+                style={{ minHeight: 500 }}
               >
                 {/* Horizontal grid lines */}
                 {ALL_HOURS.map((h) => {
-                  const px = minutesToPx(h * 60);
+                  const topPercent = minutesToPercent(h * 60);
                   return (
                     <div
                       key={`grid-${h}`}
                       className="absolute left-0 right-0 border-b border-[var(--app-border)] opacity-30 pointer-events-none"
-                      style={{ top: `${px}px` }}
+                      style={{ top: `${topPercent}%` }}
                     />
                   );
                 })}
@@ -287,15 +286,14 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
                 {currentTimePx !== null && (
                   <div
                     className="absolute left-0 right-0 border-t-[1.5px] border-red-400 z-20 pointer-events-none"
-                    style={{ top: `${currentTimePx}px` }}
+                    style={{ top: `${currentTimePx}%` }}
                   />
                 )}
 
                 {/* Task blocks inside this column */}
                 {colTasks.map((task) => {
-                  const topPx = minutesToPx(task.startMinutes);
-                  const rawHeight = minutesToPx(task.endMinutes) - minutesToPx(task.startMinutes);
-                  const heightPx = Math.max(rawHeight, 28);
+                  const topPercent = minutesToPercent(task.startMinutes);
+                  const heightPercent = Math.max(0.8, minutesToPercent(task.endMinutes) - minutesToPercent(task.startMinutes));
                   const colWidth = 100 / task.colTotal;
                   const leftPercent = task.colIndex * colWidth;
 
@@ -305,10 +303,10 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
                       onClick={() => onOpenEdit(task)}
                       className="absolute rounded-lg overflow-hidden transition-all duration-200 hover:brightness-110 hover:scale-[1.02] cursor-pointer shadow-sm text-left group"
                       style={{
-                        top: `${topPx}px`,
+                        top: `${topPercent}%`,
                         left: `${leftPercent + 3}%`,
                         width: `${colWidth - 6}%`,
-                        height: `${heightPx}px`,
+                        height: `${heightPercent}%`,
                         backgroundColor: p.color,
                         opacity: task.completed ? 0.48 : 1,
                         minHeight: '28px',
@@ -343,11 +341,11 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
                   return (
                     <svg
                       className="absolute inset-0 pointer-events-none z-10"
-                      style={{ width: '100%', height: BODY_HEIGHT }}
+                      style={{ width: '100%', height: '100%' }}
                     >
                       {arrows.map(({ from, to }, i) => {
-                        const fromTop = minutesToPx(from.startMinutes) + Math.max(minutesToPx(from.endMinutes) - minutesToPx(from.startMinutes), 28) / 2;
-                        const toTop = minutesToPx(to.startMinutes);
+                        const fromTop = minutesToPercent(from.startMinutes) + Math.max(0.8, minutesToPercent(from.endMinutes) - minutesToPercent(from.startMinutes)) / 2;
+                        const toTop = minutesToPercent(to.startMinutes);
                         const fromColWidth = 100 / from.colTotal;
                         const toColWidth = 100 / to.colTotal;
                         const fromLeft = (from.colIndex * fromColWidth + fromColWidth / 2) + '%';
@@ -356,9 +354,9 @@ export function GanttChart({ tasks, projects, selectedDate, onOpenEdit, onReorde
                           <line
                             key={`dep-${i}`}
                             x1={fromLeft}
-                            y1={fromTop}
+                            y1={`${fromTop}%`}
                             x2={toLeft}
-                            y2={toTop}
+                            y2={`${toTop}%`}
                             stroke="var(--app-accent)"
                             strokeWidth={1.5}
                             strokeDasharray="4 2"

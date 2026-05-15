@@ -7,8 +7,6 @@ interface CompletionStatsPanelProps {
   projects: Project[];
 }
 
-const PROJECT_BAR_OPACITIES = [1, 0.82, 0.68, 0.54, 0.42, 0.32];
-
 export function CompletionStatsPanel({ tasks, projects }: CompletionStatsPanelProps) {
   const { completionPie, projectBar } = useMemo(() => {
     const total = tasks.length;
@@ -28,10 +26,10 @@ export function CompletionStatsPanel({ tasks, projects }: CompletionStatsPanelPr
     });
 
     const barData = Object.entries(projectCounts)
-      .map(([pid, count], idx) => {
-        if (pid === 'none') return { name: '未分类', count, opacity: PROJECT_BAR_OPACITIES[idx % PROJECT_BAR_OPACITIES.length] };
+      .map(([pid, count]) => {
+        if (pid === 'none') return { name: '未分类', count, color: '#9ca3af' };
         const p = projects.find(pr => pr.id === pid);
-        return { name: p?.name || pid, count, opacity: PROJECT_BAR_OPACITIES[idx % PROJECT_BAR_OPACITIES.length] };
+        return { name: p?.name || pid, count, color: p?.color || 'var(--app-accent)' };
       })
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
@@ -93,7 +91,7 @@ export function CompletionStatsPanel({ tasks, projects }: CompletionStatsPanelPr
 
       {/* Bottom: Completed by Project Bar Chart */}
       <div className="glass-panel bg-[var(--app-surface)] rounded-xl border border-[var(--app-border)] p-3 shadow-sm">
-        <h4 className="text-xs font-semibold text-[var(--app-text)] mb-2">已完成任务 · 项目分布</h4>
+        <h4 className="text-xs font-semibold text-[var(--app-text)] mb-2">项目任务分布</h4>
         {projectBar.length === 0 ? (
           <div className="flex items-center justify-center h-20 text-[11px] text-[var(--app-text-muted)]">
             暂无已完成任务
@@ -126,7 +124,7 @@ export function CompletionStatsPanel({ tasks, projects }: CompletionStatsPanelPr
               />
               <Bar dataKey="count" radius={[3, 3, 0, 0]}>
                 {projectBar.map((entry, i) => (
-                  <Cell key={i} fill="var(--app-accent)" fillOpacity={entry.opacity} />
+                  <Cell key={i} fill={entry.color} />
                 ))}
               </Bar>
             </BarChart>

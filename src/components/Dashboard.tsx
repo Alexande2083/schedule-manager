@@ -219,7 +219,13 @@ export const Dashboard = memo(function Dashboard({
       {/* ── Row 1: Task List (primary) + Calendar sidebar ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Tasks — 2/3 width */}
-        <div className="xl:col-span-2 card dashboard-primary-card" style={{ padding: 'var(--space-6)' }}>
+        <div
+          className={cn(
+            'xl:col-span-2 card dashboard-primary-card',
+            showGantt && 'flex flex-col min-h-[720px]'
+          )}
+          style={{ padding: 'var(--space-6)' }}
+        >
           <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold">今日任务</h2>
@@ -267,7 +273,9 @@ export const Dashboard = memo(function Dashboard({
 
           {/* Task List */}
           {showGantt ? (
-            <GanttChart tasks={tasks} projects={projects} selectedDate={selectedDate} onOpenEdit={onOpenEdit} onReorderProjects={onReorderProjects} />
+            <div className="flex-1 min-h-[548px]">
+              <GanttChart tasks={tasks} projects={projects} selectedDate={selectedDate} onOpenEdit={onOpenEdit} onReorderProjects={onReorderProjects} />
+            </div>
           ) : rootTasks.length === 0 ? (
             <div className="py-12 text-center">
               <CheckCircle2 size={32} className="mx-auto mb-3 text-[var(--color-text-muted)]" />
